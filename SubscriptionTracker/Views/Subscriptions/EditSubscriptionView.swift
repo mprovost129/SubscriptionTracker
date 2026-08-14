@@ -18,6 +18,10 @@ struct EditSubscriptionView: View {
     @State private var showingSaveError = false
     @State private var saveErrorMessage = ""
     
+    @AppStorage(AppSettings.reminderDaysBeforeKey)
+    private var reminderDaysBefore =
+        AppSettings.defaultReminderDaysBefore
+    
     init(subscription: Subscription) {
         self.subscription = subscription
 
@@ -60,7 +64,7 @@ struct EditSubscriptionView: View {
 
                     TextField("Price", text: $price)
                         .keyboardType(.decimalPad)
-
+                    
                     Picker("Billing", selection: $billingFrequency) {
                         Text("Monthly")
                             .tag(BillingFrequency.monthly)
@@ -74,6 +78,20 @@ struct EditSubscriptionView: View {
                         selection: $nextBillingDate,
                         displayedComponents: .date
                     )
+                    
+                    if !price.isEmpty {
+                        if let priceDecimal {
+                            if priceDecimal <= 0 {
+                                Text("Price must be greater than zero.")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                        } else {
+                            Text("Enter a valid price.")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
                 }
 
                 Section("Details") {
@@ -91,6 +109,19 @@ struct EditSubscriptionView: View {
                         "Renewal Reminder",
                         isOn: $reminderEnabled
                     )
+                    
+                    Toggle(
+                        "Renewal Reminder",
+                        isOn: $reminderEnabled
+                    )
+
+                    if reminderEnabled {
+                        Text(
+                            "Reminder will be sent \(reminderDaysBefore) days before renewal."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
                 }
             }
             .navigationTitle("Edit Subscription")
