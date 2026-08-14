@@ -9,22 +9,40 @@ struct AddSubscriptionView: View {
     @State private var price = ""
     @State private var billingFrequency: BillingFrequency = .monthly
     @State private var nextBillingDate = Date()
-    @State private var category = "Other"
+    @State private var category: SubscriptionCategory = .other
     @State private var notes = ""
     @State private var reminderEnabled = true
+    @State private var showingSaveError = false
+    @State private var saveErrorMessage = ""
     
     @AppStorage(AppSettings.remindersEnabledByDefaultKey)
-    
     private var remindersEnabledByDefault =
         AppSettings.defaultRemindersEnabled
+
+    @AppStorage(AppSettings.reminderDaysBeforeKey)
+    private var reminderDaysBefore =
+        AppSettings.defaultReminderDaysBefore
+
+    @AppStorage(AppSettings.currencyCodeKey)
+    private var currencyCode =
+        AppSettings.defaultCurrencyCode
 
     private var priceDecimal: Decimal? {
         Decimal(string: price)
     }
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        && priceDecimal != nil
+        guard
+            !name.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).isEmpty,
+            let priceDecimal,
+            priceDecimal > 0
+        else {
+            return false
+        }
+
+        return true
     }
 
     var body: some View {
@@ -49,11 +67,30 @@ struct AddSubscriptionView: View {
                         selection: $nextBillingDate,
                         displayedComponents: .date
                     )
+                    
+                    if !price.isEmpty {
+                        if let priceDecimal {
+                            if priceDecimal <= 0 {
+                                Text("Price must be greater than zero.")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                        } else {
+                            Text("Enter a valid price.")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
                 }
 
                 Section("Details") {
-                    TextField("Category", text: $category)
-
+                    Picker("Category", selection: $category) {
+                        ForEach(SubscriptionCategory.allCases, id: \.self) { category in
+                            Text(category.rawValue)
+                                .tag(category)
+                        }
+                    }
+                    
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(3...6)
 
@@ -61,15 +98,19 @@ struct AddSubscriptionView: View {
                         "Renewal Reminder",
                         isOn: $reminderEnabled
                     )
-                }
-                
-                .onAppear {
-                    reminderEnabled = remindersEnabledByDefault
+                    
+                    if reminderEnabled {
+                        Text("Reminder will be sent \(reminderDaysBefore) days before renewal.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .navigationTitle("Add Subscription")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+            .onAppear {
+                reminderEnabled = remindersEnabledByDefault
+            }            .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
@@ -85,6 +126,15 @@ struct AddSubscriptionView: View {
                     .disabled(!canSave)
                 }
             }
+            .alert(
+                "Could Not Save Subscription",
+                isPresented: $showingSaveError
+            ) {
+                Button("OK", role: .cancel) {
+                }
+            } message: {
+                Text(saveErrorMessage)
+            }
         }
     }
 
@@ -98,12 +148,22 @@ struct AddSubscriptionView: View {
             price: priceDecimal,
             billingFrequency: billingFrequency,
             nextBillingDate: nextBillingDate,
-            category: category,
+            category: category.rawValue,
             notes: notes,
             reminderEnabled: reminderEnabled
         )
 
         modelContext.insert(subscription)
+
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.delete(subscription)
+
+            saveErrorMessage = error.localizedDescription
+            showingSaveError = true
+            return
+        }
 
         if reminderEnabled {
             do {
@@ -120,6 +180,7 @@ struct AddSubscriptionView: View {
         }
 
         dismiss()
+        
     }
 }
 

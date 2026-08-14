@@ -86,6 +86,11 @@ struct SubscriptionDetailView: View {
                     ? "Active"
                     : "Canceled"
                 )
+                
+                LabeledContent(
+                    "Category",
+                    value: subscription.category
+                )
             }
             
             Section("Cost") {

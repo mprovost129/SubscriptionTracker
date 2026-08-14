@@ -11,6 +11,18 @@ enum SubscriptionStatus: String, Codable, CaseIterable {
     case canceled
 }
 
+enum SubscriptionCategory: String, CaseIterable, Codable {
+    case streaming = "Streaming"
+    case software = "Software"
+    case ai = "AI"
+    case cloudStorage = "Cloud Storage"
+    case gaming = "Gaming"
+    case fitness = "Fitness"
+    case productivity = "Productivity"
+    case business = "Business"
+    case other = "Other"
+}
+
 @Model
 final class Subscription {
     
@@ -32,7 +44,7 @@ final class Subscription {
         price: Decimal,
         billingFrequency: BillingFrequency,
         nextBillingDate: Date,
-        category: String = "Other",
+        category: String = SubscriptionCategory.other.rawValue,
         notes: String = "",
         reminderEnabled: Bool = true,
         status: SubscriptionStatus = .active,

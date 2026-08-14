@@ -303,4 +303,26 @@ struct SubscriptionTrackerTests {
         #expect(components.month == 8)
         #expect(components.day == 13)
     }
+    
+    @Test
+    func zeroSubscriptionsProduceZeroMonthlyTotal() {
+        let subscriptions: [Subscription] = []
+        
+        let result = SubscriptionCalculator.totalMonthlyCost(
+            for: subscriptions
+        )
+        
+        #expect(result == Decimal.zero)
+    }
+    
+    @Test
+    func zeroSubscriptionsProduceZeroAnnualTotal() {
+        let subscriptions: [Subscription] = []
+        
+        let result = SubscriptionCalculator.totalAnnualCost(
+            for: subscriptions
+        )
+        
+        #expect(result == Decimal.zero)
+    }
 }

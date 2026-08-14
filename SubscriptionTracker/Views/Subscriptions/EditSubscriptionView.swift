@@ -1,18 +1,23 @@
 import SwiftUI
+import SwiftData
 
 struct EditSubscriptionView: View {
+    
     @Environment(\.dismiss) private var dismiss
-
+    @Environment(\.modelContext) private var modelContext
+    
     let subscription: Subscription
 
     @State private var name: String
     @State private var price: String
     @State private var billingFrequency: BillingFrequency
     @State private var nextBillingDate: Date
-    @State private var category: String
+    @State private var category: SubscriptionCategory
     @State private var notes: String
     @State private var reminderEnabled: Bool
-
+    @State private var showingSaveError = false
+    @State private var saveErrorMessage = ""
+    
     init(subscription: Subscription) {
         self.subscription = subscription
 
@@ -20,7 +25,11 @@ struct EditSubscriptionView: View {
         _price = State(initialValue: subscription.price.description)
         _billingFrequency = State(initialValue: subscription.billingFrequency)
         _nextBillingDate = State(initialValue: subscription.nextBillingDate)
-        _category = State(initialValue: subscription.category)
+        _category = State(
+            initialValue:
+                SubscriptionCategory(rawValue: subscription.category)
+                ?? .other
+        )
         _notes = State(initialValue: subscription.notes)
         _reminderEnabled = State(initialValue: subscription.reminderEnabled)
     }
@@ -59,7 +68,12 @@ struct EditSubscriptionView: View {
                 }
 
                 Section("Details") {
-                    TextField("Category", text: $category)
+                    Picker("Category", selection: $category) {
+                        ForEach(SubscriptionCategory.allCases, id: \.self) { category in
+                            Text(category.rawValue)
+                                .tag(category)
+                        }
+                    }
 
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(3...6)
@@ -88,6 +102,15 @@ struct EditSubscriptionView: View {
                     .disabled(!canSave)
                 }
             }
+            .alert(
+                "Could Not Save Changes",
+                isPresented: $showingSaveError
+            ) {
+                Button("OK", role: .cancel) {
+                }
+            } message: {
+                Text(saveErrorMessage)
+            }
         }
     }
 
@@ -102,10 +125,18 @@ struct EditSubscriptionView: View {
         subscription.price = priceDecimal
         subscription.billingFrequency = billingFrequency
         subscription.nextBillingDate = nextBillingDate
-        subscription.category = category
+        subscription.category = category.rawValue
         subscription.notes = notes
         subscription.reminderEnabled = reminderEnabled
         subscription.updatedAt = Date()
+        
+        do {
+            try modelContext.save()
+        } catch {
+            saveErrorMessage = error.localizedDescription
+            showingSaveError = true
+            return
+        }
         
         do {
             if reminderEnabled {

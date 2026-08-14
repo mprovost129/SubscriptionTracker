@@ -61,140 +61,172 @@ struct DashboardView: View {
         return "Due in \(days) days"
     }
     
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Monthly")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-                        
-                        Text(monthlyTotal, format: .currency(code: currencyCode))
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Yearly")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-                        
-                        Text(annualTotal, format: .currency(code: currencyCode))
-                            .font(.title)
-                            .fontWeight(.semibold)
-                    }
-                    
-                    Divider()
-                    
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Upcoming Renewals")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        if upcomingSubscriptions.isEmpty {
-                            Text("No upcoming renewals yet.")
+    if subscriptions.isEmpty {
+        ContentUnavailableView {
+            Label(
+                "No Subscriptions Yet",
+                systemImage: "creditcard"
+            )
+        } description: {
+            Text(
+                "Add your first subscription to start tracking monthly costs, yearly costs, and upcoming renewals."
+            )
+        } actions: {
+            Button("Add Subscription") {
+                showingAddSubscription = true
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    } else {
+        var body: some View {
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Monthly")
+                                .font(.headline)
                                 .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(upcomingSubscriptions) { subscription in
-                                NavigationLink {
-                                    SubscriptionDetailView(
-                                        subscription: subscription
-                                    )
-                                } label: {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(
-                                                renewalStatusText(
-                                                    for: subscription
-                                                )
-                                            )
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-
-                                            Text(
-                                                subscription.nextBillingDate.formatted(
-                                                    date: .abbreviated,
-                                                    time: .omitted
-                                                )
-                                            )
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Text(
-                                            subscription.price.formatted(
-                                                .currency(code: currencyCode)
-                                            )
-                                        )
-                                        .fontWeight(.semibold)
-                                    }
-                                }
-                                .buttonStyle(.plain)
-                                
-                                Divider()
-                            }
+                            
+                            Text(monthlyTotal, format: .currency(code: currencyCode))
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
                         }
                         
-                        if !canceledSubscriptions.isEmpty {
-                            Divider()
-
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Canceled")
-                                    .font(.title2)
-                                    .fontWeight(.semibold)
-
-                                ForEach(canceledSubscriptions) { subscription in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Yearly")
+                                .font(.headline)
+                                .foregroundStyle(.secondary)
+                            
+                            Text(annualTotal, format: .currency(code: currencyCode))
+                                .font(.title)
+                                .fontWeight(.semibold)
+                        }
+                        
+                        Divider()
+                        
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Upcoming Renewals")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            
+                            if upcomingSubscriptions.isEmpty {
+                                Text("No upcoming renewals yet.")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(upcomingSubscriptions) { subscription in
                                     NavigationLink {
                                         SubscriptionDetailView(
                                             subscription: subscription
                                         )
                                     } label: {
                                         HStack {
-                                            Text(subscription.name)
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text(subscription.name)
+                                                    .font(.headline)
 
+                                                Text(
+                                                    renewalStatusText(
+                                                        for: subscription
+                                                    )
+                                                )
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+
+                                                Text(
+                                                    subscription
+                                                        .nextBillingDate
+                                                        .formatted(
+                                                            date: .abbreviated,
+                                                            time: .omitted
+                                                        )
+                                                )
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            }
+                                            
                                             Spacer()
-
+                                            
                                             Text(
                                                 subscription.price.formatted(
                                                     .currency(code: currencyCode)
                                                 )
                                             )
-                                            .foregroundStyle(.secondary)
+                                            .fontWeight(.semibold)
+                                            .accessibilityElement(children: .combine)
                                         }
                                     }
                                     .buttonStyle(.plain)
+                                    
+                                    Divider()
+                                }
+                            }
+                            
+                            if !canceledSubscriptions.isEmpty {
+                                Divider()
+
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Canceled")
+                                        .font(.title2)
+                                        .fontWeight(.semibold)
+
+                                    ForEach(canceledSubscriptions) { subscription in
+                                        NavigationLink {
+                                            SubscriptionDetailView(
+                                                subscription: subscription
+                                            )
+                                        } label: {
+                                            HStack {
+                                                Text(subscription.name)
+
+                                                Spacer()
+
+                                                Text(
+                                                    subscription.price.formatted(
+                                                        .currency(code: currencyCode)
+                                                    )
+                                                )
+                                                .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
                             }
                         }
                     }
+                    
+                    .padding()
                 }
-                
-                .padding()
-            }
-            .navigationTitle("Subscriptions")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showingAddSubscription = true
-                    } label: {
-                        Image(systemName: "plus")
+                .navigationTitle("Subscriptions")
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            showingAddSubscription = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .accessibilityLabel("Add Subscription")
+                    }
+                    ToolbarItem(placement: .secondaryAction) {
+                        Button("Settings") {
+                            showingSettings = true
+                        }
+                    }
+                    ToolbarItem(placement: .secondaryAction) {
+                        Button("Show Pending Reminders") {
+                            Task {
+                                await NotificationService.printPendingNotifications()
+                            }
+                        }
                     }
                 }
-                ToolbarItem(placement: .secondaryAction) {
-                    Button("Settings") {
-                        showingSettings = true
-                    }
+                .sheet(isPresented: $showingAddSubscription) {
+                    AddSubscriptionView()
                 }
-            }
-            .sheet(isPresented: $showingAddSubscription) {
-                AddSubscriptionView()
-            }
-            .sheet(isPresented: $showingSettings) {
-                NavigationStack {
-                    SettingsView()
+                .sheet(isPresented: $showingSettings) {
+                    NavigationStack {
+                        SettingsView()
+                    }
                 }
             }
         }

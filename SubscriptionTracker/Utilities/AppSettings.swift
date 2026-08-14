@@ -7,5 +7,5 @@ enum AppSettings {
 
     static let defaultCurrencyCode = "USD"
     static let defaultRemindersEnabled = true
-    static let defaultReminderDaysBefore = 3
+    static let defaultReminderDaysBefore: Int = 3
 }
