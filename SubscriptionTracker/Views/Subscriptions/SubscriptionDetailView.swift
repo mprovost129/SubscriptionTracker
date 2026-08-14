@@ -9,6 +9,9 @@ struct SubscriptionDetailView: View {
     @State private var showingDeleteConfirmation = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(AppSettings.currencyCodeKey)
+    
+    private var currencyCode = AppSettings.defaultCurrencyCode
     
     private var monthlyEquivalent: Decimal {
         SubscriptionCalculator.monthlyEquivalent(
@@ -60,7 +63,7 @@ struct SubscriptionDetailView: View {
                 LabeledContent(
                     "Price",
                     value: subscription.price.formatted(
-                        .currency(code: "USD")
+                        .currency(code: currencyCode)
                     )
                 )
                 
@@ -89,14 +92,14 @@ struct SubscriptionDetailView: View {
                 LabeledContent(
                     "Monthly Equivalent",
                     value: monthlyEquivalent.formatted(
-                        .currency(code: "USD")
+                        .currency(code: currencyCode)
                     )
                 )
                 
                 LabeledContent(
                     "Annual Equivalent",
                     value: annualEquivalent.formatted(
-                        .currency(code: "USD")
+                        .currency(code: currencyCode)
                     )
                 )
             }
@@ -105,14 +108,14 @@ struct SubscriptionDetailView: View {
                 LabeledContent(
                     "Monthly Savings",
                     value: monthlyEquivalent.formatted(
-                        .currency(code: "USD")
+                        .currency(code: currencyCode)
                     )
                 )
                 
                 LabeledContent(
                     "Annual Savings",
                     value: annualEquivalent.formatted(
-                        .currency(code: "USD")
+                        .currency(code: currencyCode)
                     )
                 )
             }

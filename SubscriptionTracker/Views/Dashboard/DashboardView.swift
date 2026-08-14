@@ -4,7 +4,11 @@ import SwiftData
 struct DashboardView: View {
     @Query private var subscriptions: [Subscription]
     @State private var showingAddSubscription = false
-
+    @State private var showingSettings = false
+    @AppStorage(AppSettings.currencyCodeKey)
+    
+    private var currencyCode = AppSettings.defaultCurrencyCode
+    
     private var monthlyTotal: Decimal {
         SubscriptionCalculator.totalMonthlyCost(
             for: subscriptions
@@ -66,7 +70,7 @@ struct DashboardView: View {
                             .font(.headline)
                             .foregroundStyle(.secondary)
                         
-                        Text(monthlyTotal, format: .currency(code: "USD"))
+                        Text(monthlyTotal, format: .currency(code: currencyCode))
                             .font(.largeTitle)
                             .fontWeight(.bold)
                     }
@@ -76,7 +80,7 @@ struct DashboardView: View {
                             .font(.headline)
                             .foregroundStyle(.secondary)
                         
-                        Text(annualTotal, format: .currency(code: "USD"))
+                        Text(annualTotal, format: .currency(code: currencyCode))
                             .font(.title)
                             .fontWeight(.semibold)
                     }
@@ -122,7 +126,7 @@ struct DashboardView: View {
                                         
                                         Text(
                                             subscription.price.formatted(
-                                                .currency(code: "USD")
+                                                .currency(code: currencyCode)
                                             )
                                         )
                                         .fontWeight(.semibold)
@@ -155,7 +159,7 @@ struct DashboardView: View {
 
                                             Text(
                                                 subscription.price.formatted(
-                                                    .currency(code: "USD")
+                                                    .currency(code: currencyCode)
                                                 )
                                             )
                                             .foregroundStyle(.secondary)
@@ -179,9 +183,19 @@ struct DashboardView: View {
                         Image(systemName: "plus")
                     }
                 }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button("Settings") {
+                        showingSettings = true
+                    }
+                }
             }
             .sheet(isPresented: $showingAddSubscription) {
                 AddSubscriptionView()
+            }
+            .sheet(isPresented: $showingSettings) {
+                NavigationStack {
+                    SettingsView()
+                }
             }
         }
     }

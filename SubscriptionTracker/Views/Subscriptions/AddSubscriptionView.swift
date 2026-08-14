@@ -12,6 +12,11 @@ struct AddSubscriptionView: View {
     @State private var category = "Other"
     @State private var notes = ""
     @State private var reminderEnabled = true
+    
+    @AppStorage(AppSettings.remindersEnabledByDefaultKey)
+    
+    private var remindersEnabledByDefault =
+        AppSettings.defaultRemindersEnabled
 
     private var priceDecimal: Decimal? {
         Decimal(string: price)
@@ -53,9 +58,13 @@ struct AddSubscriptionView: View {
                         .lineLimit(3...6)
 
                     Toggle(
-                        "Remind me 3 days before",
+                        "Renewal Reminder",
                         isOn: $reminderEnabled
                     )
+                }
+                
+                .onAppear {
+                    reminderEnabled = remindersEnabledByDefault
                 }
             }
             .navigationTitle("Add Subscription")

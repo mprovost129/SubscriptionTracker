@@ -3,8 +3,6 @@ import UserNotifications
 
 struct NotificationService {
     
-    static let reminderDaysBeforeRenewal = 3
-    
     static func requestAuthorization() async throws -> Bool {
         let center = UNUserNotificationCenter.current()
         
@@ -22,7 +20,14 @@ struct NotificationService {
             removeRenewalReminder(for: subscription)
             return
         }
+        
+        let storedReminderDays = UserDefaults.standard.object(
+            forKey: AppSettings.reminderDaysBeforeKey
+        ) as? Int
 
+        let reminderDaysBeforeRenewal: Int =
+            storedReminderDays ?? AppSettings.defaultReminderDaysBefore
+        
         // Remove any previously scheduled reminder for this subscription.
         removeRenewalReminder(for: subscription)
 
@@ -67,7 +72,7 @@ struct NotificationService {
             content: content,
             trigger: trigger
         )
-
+        
         try await UNUserNotificationCenter.current().add(request)
     }
     
@@ -85,8 +90,12 @@ struct NotificationService {
     private static func renewalMessage(
         for subscription: Subscription
     ) -> String {
+        let currencyCode = UserDefaults.standard.string(
+            forKey: AppSettings.currencyCodeKey
+        ) ?? AppSettings.defaultCurrencyCode
+        
         let amount = subscription.price.formatted(
-            .currency(code: "USD")
+            .currency(code: currencyCode)
         )
         
         return "\(amount) is due on \(subscription.nextBillingDate.formatted(date: .abbreviated, time: .omitted))."
