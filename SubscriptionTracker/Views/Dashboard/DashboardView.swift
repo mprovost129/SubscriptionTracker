@@ -61,25 +61,25 @@ struct DashboardView: View {
         return "Due in \(days) days"
     }
     
-    if subscriptions.isEmpty {
-        ContentUnavailableView {
-            Label(
-                "No Subscriptions Yet",
-                systemImage: "creditcard"
-            )
-        } description: {
-            Text(
-                "Add your first subscription to start tracking monthly costs, yearly costs, and upcoming renewals."
-            )
-        } actions: {
-            Button("Add Subscription") {
-                showingAddSubscription = true
-            }
-            .buttonStyle(.borderedProminent)
-        }
-    } else {
-        var body: some View {
-            NavigationStack {
+    var body: some View {
+        NavigationStack {
+            if subscriptions.isEmpty {
+                ContentUnavailableView {
+                    Label(
+                        "No Subscriptions Yet",
+                        systemImage: "creditcard"
+                    )
+                } description: {
+                    Text(
+                        "Add your first subscription to start tracking monthly costs, yearly costs, and upcoming renewals."
+                    )
+                } actions: {
+                    Button("Add Subscription") {
+                        showingAddSubscription = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         VStack(alignment: .leading, spacing: 8) {
@@ -197,37 +197,30 @@ struct DashboardView: View {
                     
                     .padding()
                 }
-                .navigationTitle("Subscriptions")
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            showingAddSubscription = true
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .accessibilityLabel("Add Subscription")
-                    }
-                    ToolbarItem(placement: .secondaryAction) {
-                        Button("Settings") {
-                            showingSettings = true
-                        }
-                    }
-                    ToolbarItem(placement: .secondaryAction) {
-                        Button("Show Pending Reminders") {
-                            Task {
-                                await NotificationService.printPendingNotifications()
-                            }
-                        }
-                    }
+            }
+        }
+        .navigationTitle("Subscriptions")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showingAddSubscription = true
+                } label: {
+                    Image(systemName: "plus")
                 }
-                .sheet(isPresented: $showingAddSubscription) {
-                    AddSubscriptionView()
+                .accessibilityLabel("Add Subscription")
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button("Settings") {
+                    showingSettings = true
                 }
-                .sheet(isPresented: $showingSettings) {
-                    NavigationStack {
-                        SettingsView()
-                    }
-                }
+            }
+        }
+        .sheet(isPresented: $showingAddSubscription) {
+            AddSubscriptionView()
+        }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                SettingsView()
             }
         }
     }

@@ -39,10 +39,19 @@ struct EditSubscriptionView: View {
     }
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        && priceDecimal != nil
-    }
+        guard
+            !name.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).isEmpty,
+            let priceDecimal,
+            priceDecimal > 0
+        else {
+            return false
+        }
 
+        return true
+    }
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -79,7 +88,7 @@ struct EditSubscriptionView: View {
                         .lineLimit(3...6)
 
                     Toggle(
-                        "Remind me 3 days before",
+                        "Renewal Reminder",
                         isOn: $reminderEnabled
                     )
                 }

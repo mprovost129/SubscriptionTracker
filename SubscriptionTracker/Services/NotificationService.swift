@@ -87,21 +87,6 @@ struct NotificationService {
             )
     }
     
-    static func printPendingNotifications() async {
-        let requests = await UNUserNotificationCenter.current()
-            .pendingNotificationRequests()
-
-        print("Pending notifications: \(requests.count)")
-
-        for request in requests {
-            print("ID: \(request.identifier)")
-            print("Title: \(request.content.title)")
-            print("Body: \(request.content.body)")
-            print("Trigger: \(String(describing: request.trigger))")
-            print("---")
-        }
-    }
-    
     static func removeAllNotifications() {
         let center = UNUserNotificationCenter.current()
 

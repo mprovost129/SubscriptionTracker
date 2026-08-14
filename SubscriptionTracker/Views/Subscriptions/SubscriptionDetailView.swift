@@ -7,6 +7,9 @@ struct SubscriptionDetailView: View {
     @State private var showingEdit = false
     @State private var showingCancelConfirmation = false
     @State private var showingDeleteConfirmation = false
+    @State private var showingPersistenceError = false
+    @State private var persistenceErrorMessage = ""
+    
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @AppStorage(AppSettings.currencyCodeKey)
@@ -37,22 +40,47 @@ struct SubscriptionDetailView: View {
     }
     
     private func cancelSubscription() {
+        let previousStatus = subscription.status
+        let previousCancellationDate = subscription.cancellationDate
+        let previousUpdatedAt = subscription.updatedAt
+
         subscription.status = .canceled
         subscription.cancellationDate = Date()
         subscription.updatedAt = Date()
-        
-        NotificationService.removeRenewalReminder(
-            for: subscription
-        )
-    }
-    
-    private func deleteSubscription() {
-        NotificationService.removeRenewalReminder(
-            for: subscription
-        )
 
+        do {
+            try modelContext.save()
+
+            NotificationService.removeRenewalReminder(
+                for: subscription
+            )
+        } catch {
+            subscription.status = previousStatus
+            subscription.cancellationDate = previousCancellationDate
+            subscription.updatedAt = previousUpdatedAt
+
+            persistenceErrorMessage = error.localizedDescription
+            showingPersistenceError = true
+        }
+    }
+
+    private func deleteSubscription() {
         modelContext.delete(subscription)
-        dismiss()
+
+        do {
+            try modelContext.save()
+
+            NotificationService.removeRenewalReminder(
+                for: subscription
+            )
+
+            dismiss()
+        } catch {
+            modelContext.rollback()
+
+            persistenceErrorMessage = error.localizedDescription
+            showingPersistenceError = true
+        }
     }
     
     var body: some View {
@@ -109,20 +137,22 @@ struct SubscriptionDetailView: View {
                 )
             }
             
-            Section("If You Cancel") {
-                LabeledContent(
-                    "Monthly Savings",
-                    value: monthlyEquivalent.formatted(
-                        .currency(code: currencyCode)
+            if subscription.status == .active {
+                Section("If You Cancel") {
+                    LabeledContent(
+                        "Monthly Savings",
+                        value: monthlyEquivalent.formatted(
+                            .currency(code: currencyCode)
+                        )
                     )
-                )
-                
-                LabeledContent(
-                    "Annual Savings",
-                    value: annualEquivalent.formatted(
-                        .currency(code: currencyCode)
+                    
+                    LabeledContent(
+                        "Annual Savings",
+                        value: annualEquivalent.formatted(
+                            .currency(code: currencyCode)
+                        )
                     )
-                )
+                }
             }
             
             Section {
@@ -204,6 +234,16 @@ struct SubscriptionDetailView: View {
             Text(
                 "This permanently removes the subscription and cannot be undone."
             )
+        }
+        
+        .alert(
+            "Could Not Save Changes",
+            isPresented: $showingPersistenceError
+        ) {
+            Button("OK", role: .cancel) {
+            }
+        } message: {
+            Text(persistenceErrorMessage)
         }
     }
 }
