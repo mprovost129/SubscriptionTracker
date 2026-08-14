@@ -109,11 +109,6 @@ struct EditSubscriptionView: View {
                         "Renewal Reminder",
                         isOn: $reminderEnabled
                     )
-                    
-                    Toggle(
-                        "Renewal Reminder",
-                        isOn: $reminderEnabled
-                    )
 
                     if reminderEnabled {
                         Text(
