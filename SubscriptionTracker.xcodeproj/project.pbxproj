@@ -30,11 +30,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4403D7AE302DFC3400A8FC53 /* SubscriptionTracker */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = SubscriptionTracker;
-			sourceTree = "<group>";
-		};
 		4403D7BE302DFC3600A8FC53 /* SubscriptionTrackerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SubscriptionTrackerTests;
@@ -43,6 +38,11 @@
 		4403D7C8302DFC3600A8FC53 /* SubscriptionTrackerUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SubscriptionTrackerUITests;
+			sourceTree = "<group>";
+		};
+		4403D7FF302E079B00A8FC53 /* SubscriptionTracker */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SubscriptionTracker;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,7 +75,7 @@
 		4403D7A3302DFC3400A8FC53 = {
 			isa = PBXGroup;
 			children = (
-				4403D7AE302DFC3400A8FC53 /* SubscriptionTracker */,
+				4403D7FF302E079B00A8FC53 /* SubscriptionTracker */,
 				4403D7BE302DFC3600A8FC53 /* SubscriptionTrackerTests */,
 				4403D7C8302DFC3600A8FC53 /* SubscriptionTrackerUITests */,
 				4403D7AD302DFC3400A8FC53 /* Products */,
@@ -108,7 +108,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4403D7AE302DFC3400A8FC53 /* SubscriptionTracker */,
+				4403D7FF302E079B00A8FC53 /* SubscriptionTracker */,
 			);
 			name = SubscriptionTracker;
 			packageProductDependencies = (

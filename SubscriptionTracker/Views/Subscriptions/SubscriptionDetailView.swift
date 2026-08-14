@@ -1,0 +1,201 @@
+import SwiftUI
+import SwiftData
+
+struct SubscriptionDetailView: View {
+    let subscription: Subscription
+    
+    @State private var showingEdit = false
+    @State private var showingCancelConfirmation = false
+    @State private var showingDeleteConfirmation = false
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    
+    private var monthlyEquivalent: Decimal {
+        SubscriptionCalculator.monthlyEquivalent(
+            price: subscription.price,
+            billingFrequency: subscription.billingFrequency
+        )
+    }
+
+    private var annualEquivalent: Decimal {
+        SubscriptionCalculator.annualEquivalent(
+            price: subscription.price,
+            billingFrequency: subscription.billingFrequency
+        )
+    }
+
+    private var billingLabel: String {
+        switch subscription.billingFrequency {
+        case .monthly:
+            return "Monthly"
+        case .yearly:
+            return "Yearly"
+        }
+    }
+    
+    private func cancelSubscription() {
+        subscription.status = .canceled
+        subscription.cancellationDate = Date()
+        subscription.updatedAt = Date()
+        
+        NotificationService.removeRenewalReminder(
+            for: subscription
+        )
+    }
+    
+    private func deleteSubscription() {
+        NotificationService.removeRenewalReminder(
+            for: subscription
+        )
+
+        modelContext.delete(subscription)
+        dismiss()
+    }
+    
+    var body: some View {
+        Form {
+            Section("Subscription") {
+                LabeledContent("Name", value: subscription.name)
+                
+                LabeledContent(
+                    "Price",
+                    value: subscription.price.formatted(
+                        .currency(code: "USD")
+                    )
+                )
+                
+                LabeledContent(
+                    "Billing",
+                    value: billingLabel
+                )
+                
+                LabeledContent(
+                    "Next Renewal",
+                    value: subscription.nextBillingDate.formatted(
+                        date: .abbreviated,
+                        time: .omitted
+                    )
+                )
+                
+                LabeledContent(
+                    "Status",
+                    value: subscription.status == .active
+                    ? "Active"
+                    : "Canceled"
+                )
+            }
+            
+            Section("Cost") {
+                LabeledContent(
+                    "Monthly Equivalent",
+                    value: monthlyEquivalent.formatted(
+                        .currency(code: "USD")
+                    )
+                )
+                
+                LabeledContent(
+                    "Annual Equivalent",
+                    value: annualEquivalent.formatted(
+                        .currency(code: "USD")
+                    )
+                )
+            }
+            
+            Section("If You Cancel") {
+                LabeledContent(
+                    "Monthly Savings",
+                    value: monthlyEquivalent.formatted(
+                        .currency(code: "USD")
+                    )
+                )
+                
+                LabeledContent(
+                    "Annual Savings",
+                    value: annualEquivalent.formatted(
+                        .currency(code: "USD")
+                    )
+                )
+            }
+            
+            Section {
+                Button("Delete Subscription", role: .destructive) {
+                    showingDeleteConfirmation = true
+                }
+            }
+            
+            if !subscription.notes.isEmpty {
+                Section("Notes") {
+                    Text(subscription.notes)
+                }
+            }
+            
+            if subscription.status == .active {
+                Section {
+                    Button("Cancel Subscription", role: .destructive) {
+                        showingCancelConfirmation = true
+                    }
+                }
+            }
+            
+            if let cancellationDate = subscription.cancellationDate {
+                LabeledContent(
+                    "Canceled",
+                    value: cancellationDate.formatted(
+                        date: .abbreviated,
+                        time: .omitted
+                    )
+                )
+            }
+        }
+        
+        .navigationTitle(subscription.name)
+        .navigationBarTitleDisplayMode(.inline)
+        
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Edit") {
+                    showingEdit = true
+                }
+            }
+        }
+        .sheet(isPresented: $showingEdit) {
+            EditSubscriptionView(
+                subscription: subscription
+            )
+        }
+        
+        .confirmationDialog(
+            "Cancel \(subscription.name)?",
+            isPresented: $showingCancelConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Cancel Subscription", role: .destructive) {
+                cancelSubscription()
+            }
+
+            Button("Keep Subscription", role: .cancel) {
+            }
+        } message: {
+            Text(
+                "This will keep the subscription record but remove it from active spending totals."
+            )
+        }
+        
+        .confirmationDialog(
+            "Delete \(subscription.name)?",
+            isPresented: $showingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Permanently", role: .destructive) {
+                deleteSubscription()
+            }
+
+            Button("Keep Subscription", role: .cancel) {
+            }
+        } message: {
+            Text(
+                "This permanently removes the subscription and cannot be undone."
+            )
+        }
+    }
+}
