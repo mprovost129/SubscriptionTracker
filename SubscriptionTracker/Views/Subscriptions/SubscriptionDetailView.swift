@@ -156,22 +156,24 @@ struct SubscriptionDetailView: View {
             }
             
             Section {
+                if !subscription.notes.isEmpty {
+                    Section("Notes") {
+                        Text(subscription.notes)
+                    }
+                }
+            }
+            
+            Section {
+                if subscription.status == .active {
+                    Section {
+                        Button("Cancel Subscription", role: .destructive) {
+                            showingCancelConfirmation = true
+                        }
+                    }
+                }
+                
                 Button("Delete Subscription", role: .destructive) {
                     showingDeleteConfirmation = true
-                }
-            }
-            
-            if !subscription.notes.isEmpty {
-                Section("Notes") {
-                    Text(subscription.notes)
-                }
-            }
-            
-            if subscription.status == .active {
-                Section {
-                    Button("Cancel Subscription", role: .destructive) {
-                        showingCancelConfirmation = true
-                    }
                 }
             }
             
@@ -202,33 +204,33 @@ struct SubscriptionDetailView: View {
             )
         }
         
-        .confirmationDialog(
+        .alert(
             "Cancel \(subscription.name)?",
-            isPresented: $showingCancelConfirmation,
-            titleVisibility: .visible
+            isPresented: $showingCancelConfirmation
         ) {
             Button("Cancel Subscription", role: .destructive) {
                 cancelSubscription()
             }
 
             Button("Keep Subscription", role: .cancel) {
+                showingCancelConfirmation = false
             }
         } message: {
             Text(
                 "This will keep the subscription record but remove it from active spending totals."
             )
         }
-        
-        .confirmationDialog(
+
+        .alert(
             "Delete \(subscription.name)?",
-            isPresented: $showingDeleteConfirmation,
-            titleVisibility: .visible
+            isPresented: $showingDeleteConfirmation
         ) {
             Button("Delete Permanently", role: .destructive) {
                 deleteSubscription()
             }
 
-            Button("Keep Subscription", role: .cancel) {
+            Button("Cancel", role: .cancel) {
+                showingDeleteConfirmation = false
             }
         } message: {
             Text(
