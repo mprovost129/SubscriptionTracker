@@ -325,4 +325,116 @@ struct SubscriptionTrackerTests {
         
         #expect(result == Decimal.zero)
     }
+    
+    @Test
+    func january31AdvancesToFebruary28InNonLeapYear() {
+        let calendar = Calendar.current
+        
+        let startingDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 1,
+                day: 31
+            )
+        )!
+        
+        let result = RenewalCalculator.nextRenewalDate(
+            after: startingDate,
+            billingFrequency: .monthly,
+            calendar: calendar
+        )!
+        
+        let components = calendar.dateComponents(
+            [.year, .month, .day],
+            from: result
+        )
+        
+        #expect(components.year == 2026)
+        #expect(components.month == 2)
+        #expect(components.day == 28)
+    }
+    
+    @Test
+    func january31AdvancesToFebruary29InLeapYear() {
+        let calendar = Calendar.current
+        
+        let startingDate = calendar.date(
+            from: DateComponents(
+                year: 2028,
+                month: 1,
+                day: 31
+            )
+        )!
+        
+        let result = RenewalCalculator.nextRenewalDate(
+            after: startingDate,
+            billingFrequency: .monthly,
+            calendar: calendar
+        )!
+        
+        let components = calendar.dateComponents(
+            [.year, .month, .day],
+            from: result
+        )
+        
+        #expect(components.year == 2028)
+        #expect(components.month == 2)
+        #expect(components.day == 29)
+    }
+    
+    @Test
+    func march31AdvancesToApril30() {
+        let calendar = Calendar.current
+        
+        let startingDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 3,
+                day: 31
+            )
+        )!
+        
+        let result = RenewalCalculator.nextRenewalDate(
+            after: startingDate,
+            billingFrequency: .monthly,
+            calendar: calendar
+        )!
+        
+        let components = calendar.dateComponents(
+            [.year, .month, .day],
+            from: result
+        )
+        
+        #expect(components.year == 2026)
+        #expect(components.month == 4)
+        #expect(components.day == 30)
+    }
+    
+    @Test
+    func leapDayYearlyRenewalAdvancesToFebruary28() {
+        let calendar = Calendar.current
+        
+        let startingDate = calendar.date(
+            from: DateComponents(
+                year: 2028,
+                month: 2,
+                day: 29
+            )
+        )!
+        
+        let result = RenewalCalculator.nextRenewalDate(
+            after: startingDate,
+            billingFrequency: .yearly,
+            calendar: calendar
+        )!
+        
+        let components = calendar.dateComponents(
+            [.year, .month, .day],
+            from: result
+        )
+        
+        #expect(components.year == 2029)
+        #expect(components.month == 2)
+        #expect(components.day == 28)
+    }
 }
