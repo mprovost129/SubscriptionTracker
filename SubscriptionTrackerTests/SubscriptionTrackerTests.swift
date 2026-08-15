@@ -437,4 +437,98 @@ struct SubscriptionTrackerTests {
         #expect(components.month == 2)
         #expect(components.day == 28)
     }
+    
+    @Test
+    func changingMonthlyPriceUpdatesMonthlyAndAnnualTotals() {
+        let subscription = Subscription(
+            name: "Test",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+        
+        var subscriptions = [subscription]
+        
+        #expect(
+            SubscriptionCalculator.totalMonthlyCost(
+                for: subscriptions
+            ) == Decimal(10)
+        )
+        
+        #expect(
+            SubscriptionCalculator.totalAnnualCost(
+                for: subscriptions
+            ) == Decimal(120)
+        )
+        
+        subscription.price = Decimal(25)
+        
+        #expect(
+            SubscriptionCalculator.totalMonthlyCost(
+                for: subscriptions
+            ) == Decimal(25)
+        )
+        
+        #expect(
+            SubscriptionCalculator.totalAnnualCost(
+                for: subscriptions
+            ) == Decimal(300)
+        )
+    }
+    
+    @Test
+    func changingBillingFrequencyUpdatesNormalizedTotals() {
+        let subscription = Subscription(
+            name: "Test",
+            price: Decimal(120),
+            billingFrequency: .yearly,
+            nextBillingDate: Date()
+        )
+        
+        let subscriptions = [subscription]
+        
+        #expect(
+            SubscriptionCalculator.totalMonthlyCost(
+                for: subscriptions
+            ) == Decimal(10)
+        )
+        
+        #expect(
+            SubscriptionCalculator.totalAnnualCost(
+                for: subscriptions
+            ) == Decimal(120)
+        )
+        
+        subscription.billingFrequency = .monthly
+        
+        #expect(
+            SubscriptionCalculator.totalMonthlyCost(
+                for: subscriptions
+            ) == Decimal(120)
+        )
+        
+        #expect(
+            SubscriptionCalculator.totalAnnualCost(
+                for: subscriptions
+            ) == Decimal(1440)
+        )
+    }
+    @Test
+    func yearlySubscriptionKeepsActualRenewalAmountWhileNormalizingMonthlyCost() {
+        let subscription = Subscription(
+            name: "Annual Service",
+            price: Decimal(240),
+            billingFrequency: .yearly,
+            nextBillingDate: Date()
+        )
+        
+        let monthlyEquivalent =
+        SubscriptionCalculator.monthlyEquivalent(
+            price: subscription.price,
+            billingFrequency: subscription.billingFrequency
+        )
+        
+        #expect(subscription.price == Decimal(240))
+        #expect(monthlyEquivalent == Decimal(20))
+    }
 }

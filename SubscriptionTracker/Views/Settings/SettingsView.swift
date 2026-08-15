@@ -114,16 +114,16 @@ struct SettingsView: View {
             notificationStatus = settings.authorizationStatus
         }
         
-        .confirmationDialog(
+        .alert(
             "Clear all subscription data?",
-            isPresented: $showingClearDataConfirmation,
-            titleVisibility: .visible
+            isPresented: $showingClearDataConfirmation
         ) {
             Button("Clear All Data", role: .destructive) {
                 clearAllData()
             }
-            
+
             Button("Cancel", role: .cancel) {
+                showingClearDataConfirmation = false
             }
         } message: {
             Text(

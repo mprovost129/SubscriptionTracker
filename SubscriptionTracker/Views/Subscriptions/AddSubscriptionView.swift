@@ -61,7 +61,8 @@ struct AddSubscriptionView: View {
                         Text("Yearly")
                             .tag(BillingFrequency.yearly)
                     }
-
+                    .pickerStyle(.segmented)
+                    
                     DatePicker(
                         "Next Billing Date",
                         selection: $nextBillingDate,
