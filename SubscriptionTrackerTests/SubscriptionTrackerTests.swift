@@ -447,7 +447,7 @@ struct SubscriptionTrackerTests {
             nextBillingDate: Date()
         )
         
-        var subscriptions = [subscription]
+        let subscriptions = [subscription]
         
         #expect(
             SubscriptionCalculator.totalMonthlyCost(
