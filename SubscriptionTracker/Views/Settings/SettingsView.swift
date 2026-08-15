@@ -5,6 +5,7 @@ import UIKit
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     
     @Query private var subscriptions: [Subscription]
     
@@ -69,12 +70,12 @@ struct SettingsView: View {
                     "App",
                     value: "Subscription Tracker"
                 )
-
+                
                 LabeledContent(
                     "Version",
                     value: appVersion
                 )
-
+                
                 NavigationLink("Privacy") {
                     PrivacyView()
                 }
@@ -108,12 +109,15 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .task {
-            let settings = await UNUserNotificationCenter.current()
-                .notificationSettings()
-            
-            notificationStatus = settings.authorizationStatus
+            await refreshNotificationStatus()
         }
-        
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task {
+                    await refreshNotificationStatus()
+                }
+            }
+        }
         .alert(
             "Clear all subscription data?",
             isPresented: $showingClearDataConfirmation
@@ -121,7 +125,7 @@ struct SettingsView: View {
             Button("Clear All Data", role: .destructive) {
                 clearAllData()
             }
-
+            
             Button("Cancel", role: .cancel) {
                 showingClearDataConfirmation = false
             }
@@ -190,6 +194,13 @@ struct SettingsView: View {
         Task {
             await UIApplication.shared.open(url)
         }
+    }
+    
+    private func refreshNotificationStatus() async {
+        let settings = await UNUserNotificationCenter.current()
+            .notificationSettings()
+        
+        notificationStatus = settings.authorizationStatus
     }
 }
 

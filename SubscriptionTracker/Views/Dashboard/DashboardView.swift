@@ -209,18 +209,18 @@ struct DashboardView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
-                        showingSettings = true
-                    } label: {
-                        Image(systemName: "ellipsis")
-                    }
-                    .accessibilityLabel("Settings")
-                    
-                    Button {
                         showingAddSubscription = true
                     } label: {
                         Image(systemName: "plus")
                     }
                     .accessibilityLabel("Add Subscription")
+                    
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
+                    .accessibilityLabel("Settings")
                 }
             }
         }
