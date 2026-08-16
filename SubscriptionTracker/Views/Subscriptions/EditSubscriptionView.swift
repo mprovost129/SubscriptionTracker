@@ -22,6 +22,10 @@ struct EditSubscriptionView: View {
     private var reminderDaysBefore =
         AppSettings.defaultReminderDaysBefore
     
+    @AppStorage(AppSettings.currencyCodeKey)
+    private var currencyCode =
+        AppSettings.defaultCurrencyCode
+    
     init(subscription: Subscription) {
         self.subscription = subscription
 
@@ -38,8 +42,15 @@ struct EditSubscriptionView: View {
         _reminderEnabled = State(initialValue: subscription.reminderEnabled)
     }
 
-    private var priceDecimal: Decimal? {
-        Decimal(string: price)
+    private var normalizedPrice: Decimal? {
+        guard let amount = Decimal(string: price) else {
+            return nil
+        }
+
+        return CurrencyAmount.normalized(
+            amount,
+            currencyCode: currencyCode
+        )
     }
 
     private var canSave: Bool {
@@ -47,8 +58,8 @@ struct EditSubscriptionView: View {
             !name.trimmingCharacters(
                 in: .whitespacesAndNewlines
             ).isEmpty,
-            let priceDecimal,
-            priceDecimal > 0
+            let normalizedPrice,
+            normalizedPrice > 0
         else {
             return false
         }
@@ -80,8 +91,8 @@ struct EditSubscriptionView: View {
                     )
                     
                     if !price.isEmpty {
-                        if let priceDecimal {
-                            if priceDecimal <= 0 {
+                        if let normalizedPrice {
+                            if normalizedPrice <= 0 {
                                 Text("Price must be greater than zero.")
                                     .font(.caption)
                                     .foregroundStyle(.red)
@@ -150,14 +161,15 @@ struct EditSubscriptionView: View {
     }
 
     private func saveChanges() async {
-        guard let priceDecimal else {
+        guard let normalizedPrice,
+              normalizedPrice > 0 else {
             return
         }
 
         subscription.name = name.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
-        subscription.price = priceDecimal
+        subscription.price = normalizedPrice
         subscription.billingFrequency = billingFrequency
         subscription.nextBillingDate = nextBillingDate
         subscription.category = category.rawValue

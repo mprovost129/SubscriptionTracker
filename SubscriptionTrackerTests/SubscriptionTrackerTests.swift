@@ -531,4 +531,30 @@ struct SubscriptionTrackerTests {
         #expect(subscription.price == Decimal(240))
         #expect(monthlyEquivalent == Decimal(20))
     }
+    
+    @Test
+    func supportedCurrenciesNormalizePriceToTwoDecimalPlaces() {
+        let originalAmount = Decimal(string: "10.999")!
+        
+        for currencyCode in ["USD", "CAD", "EUR", "GBP"] {
+            let normalizedAmount = CurrencyAmount.normalized(
+                originalAmount,
+                currencyCode: currencyCode
+            )
+            
+            #expect(normalizedAmount == Decimal(11))
+        }
+    }
+    
+    @Test
+    func currencyNormalizationUsesCurrencyMinorUnits() {
+        let originalAmount = Decimal(string: "10.6")!
+        
+        let normalizedAmount = CurrencyAmount.normalized(
+            originalAmount,
+            currencyCode: "JPY"
+        )
+        
+        #expect(normalizedAmount == Decimal(11))
+    }
 }

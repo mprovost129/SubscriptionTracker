@@ -27,17 +27,24 @@ struct AddSubscriptionView: View {
     private var currencyCode =
         AppSettings.defaultCurrencyCode
 
-    private var priceDecimal: Decimal? {
-        Decimal(string: price)
-    }
+    private var normalizedPrice: Decimal? {
+        guard let amount = Decimal(string: price) else {
+            return nil
+        }
 
+        return CurrencyAmount.normalized(
+            amount,
+            currencyCode: currencyCode
+        )
+    }
+    
     private var canSave: Bool {
         guard
             !name.trimmingCharacters(
                 in: .whitespacesAndNewlines
             ).isEmpty,
-            let priceDecimal,
-            priceDecimal > 0
+            let normalizedPrice,
+            normalizedPrice > 0
         else {
             return false
         }
@@ -70,8 +77,8 @@ struct AddSubscriptionView: View {
                     )
                     
                     if !price.isEmpty {
-                        if let priceDecimal {
-                            if priceDecimal <= 0 {
+                        if let normalizedPrice {
+                            if normalizedPrice <= 0 {
                                 Text("Price must be greater than zero.")
                                     .font(.caption)
                                     .foregroundStyle(.red)
@@ -140,13 +147,14 @@ struct AddSubscriptionView: View {
     }
 
     private func saveSubscription() async {
-        guard let priceDecimal else {
+        guard let normalizedPrice,
+              normalizedPrice > 0 else {
             return
         }
 
         let subscription = Subscription(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            price: priceDecimal,
+            price: normalizedPrice,
             billingFrequency: billingFrequency,
             nextBillingDate: nextBillingDate,
             category: category.rawValue,
