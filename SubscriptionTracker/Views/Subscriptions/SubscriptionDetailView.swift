@@ -149,7 +149,7 @@ struct SubscriptionDetailView: View {
                 )
                 
                 LabeledContent(
-                    "Next Renewal",
+                    "Next Renewal Date",
                     value: subscription.nextBillingDate.formatted(
                         date: .abbreviated,
                         time: .omitted

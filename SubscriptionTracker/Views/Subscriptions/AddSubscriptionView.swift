@@ -56,10 +56,24 @@ struct AddSubscriptionView: View {
         NavigationStack {
             Form {
                 Section("Subscription") {
-                    TextField("Name", text: $name)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Name")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
 
-                    TextField("Price", text: $price)
-                        .keyboardType(.decimalPad)
+                        TextField("Subscription name", text: $name)
+                            .accessibilityLabel("Name")
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Price")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        TextField("0.00", text: $price)
+                            .keyboardType(.decimalPad)
+                            .accessibilityLabel("Price")
+                    }
 
                     Picker("Billing", selection: $billingFrequency) {
                         Text("Monthly")
@@ -71,7 +85,7 @@ struct AddSubscriptionView: View {
                     .pickerStyle(.segmented)
                     
                     DatePicker(
-                        "Next Billing Date",
+                        "Next Renewal Date",
                         selection: $nextBillingDate,
                         displayedComponents: .date
                     )
