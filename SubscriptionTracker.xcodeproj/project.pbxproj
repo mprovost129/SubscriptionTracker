@@ -29,6 +29,16 @@
 		4403D7C5302DFC3600A8FC53 /* SubscriptionTrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SubscriptionTrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		44C0991E30320D3F00A97E90 /* Exceptions for "SubscriptionTracker" folder in "SubscriptionTracker" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 4403D7AB302DFC3400A8FC53 /* SubscriptionTracker */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4403D7BE302DFC3600A8FC53 /* SubscriptionTrackerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -42,6 +52,9 @@
 		};
 		4403D7FF302E079B00A8FC53 /* SubscriptionTracker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				44C0991E30320D3F00A97E90 /* Exceptions for "SubscriptionTracker" folder in "SubscriptionTracker" target */,
+			);
 			path = SubscriptionTracker;
 			sourceTree = "<group>";
 		};
@@ -400,7 +413,9 @@
 				DEVELOPMENT_TEAM = 7YDJPF69B8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SubscriptionTracker/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "PDP Tracker";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -439,7 +454,9 @@
 				DEVELOPMENT_TEAM = 7YDJPF69B8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SubscriptionTracker/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "PDP Tracker";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
