@@ -5,7 +5,11 @@ struct PrivacyView: View {
         List {
             Section("Your Data") {
                 Text(
-                    "Subscription Tracker stores your subscription information locally on this device."
+                    "PDP Subscription Tracker stores your subscription information locally on this device."
+                )
+
+                Text(
+                    "PDP Subscription Tracker does not collect, transmit, sell, or share your subscription data."
                 )
 
                 Text(
@@ -15,13 +19,17 @@ struct PrivacyView: View {
 
             Section("Notifications") {
                 Text(
-                    "If you enable renewal reminders, Subscription Tracker uses local iOS notifications to remind you about upcoming subscription renewals."
+                    "If you enable renewal reminders, PDP Subscription Tracker uses local iOS notifications to remind you about upcoming subscription renewals."
                 )
             }
 
             Section("Data Control") {
                 Text(
                     "You can delete individual subscriptions at any time or remove all subscription data from Settings."
+                )
+
+                Text(
+                    "Deleting PDP Subscription Tracker also removes its locally stored subscription data."
                 )
             }
         }

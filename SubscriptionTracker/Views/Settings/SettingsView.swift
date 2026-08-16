@@ -5,6 +5,7 @@ import UIKit
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     
     @Query private var subscriptions: [Subscription]
@@ -68,7 +69,7 @@ struct SettingsView: View {
             Section("About") {
                 LabeledContent(
                     "App",
-                    value: "Subscription Tracker"
+                    value: "PDP Subscription Tracker"
                 )
                 
                 LabeledContent(
@@ -89,7 +90,7 @@ struct SettingsView: View {
                 
                 if notificationStatus == .denied {
                     Text(
-                        "Notifications are turned off in iOS Settings. Subscription Tracker will continue to work, but renewal reminders cannot be delivered."
+                        "Notifications are turned off in iOS Settings. PDP Subscription Tracker will continue to work, but renewal reminders cannot be delivered."
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -108,6 +109,13 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") {
+                    dismiss()
+                }
+            }
+        }
         .task {
             await refreshNotificationStatus()
         }
@@ -147,9 +155,15 @@ struct SettingsView: View {
     }
     
     private var appVersion: String {
-        Bundle.main.object(
+        let version = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
         ) as? String ?? "1.0"
+
+        let build = Bundle.main.object(
+            forInfoDictionaryKey: "CFBundleVersion"
+        ) as? String ?? "1"
+
+        return "\(version) (\(build))"
     }
     
     private var notificationStatusText: String {
