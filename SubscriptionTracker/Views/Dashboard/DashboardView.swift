@@ -139,6 +139,17 @@ struct DashboardView: View {
                                                     .font(.caption)
                                                     .fontWeight(.medium)
                                                     
+                                                    Label(
+                                                        subscription.reminderEnabled
+                                                            ? "Reminder On"
+                                                            : "Reminder Off",
+                                                        systemImage: subscription.reminderEnabled
+                                                            ? "bell.fill"
+                                                            : "bell.slash"
+                                                    )
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                                    
                                                     Text(
                                                         subscription
                                                             .nextBillingDate

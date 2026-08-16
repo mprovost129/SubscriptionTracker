@@ -6,6 +6,7 @@ struct SubscriptionDetailView: View {
     
     @State private var showingEdit = false
     @State private var showingCancelConfirmation = false
+    @State private var showingReactivateConfirmation = false
     @State private var showingDeleteConfirmation = false
     @State private var showingPersistenceError = false
     @State private var persistenceErrorMessage = ""
@@ -39,6 +40,14 @@ struct SubscriptionDetailView: View {
         }
     }
     
+    private var reminderStatusText: String {
+        guard subscription.status == .active else {
+            return "Off (Canceled)"
+        }
+
+        return subscription.reminderEnabled ? "On" : "Off"
+    }
+    
     private func cancelSubscription() {
         let previousStatus = subscription.status
         let previousCancellationDate = subscription.cancellationDate
@@ -63,7 +72,46 @@ struct SubscriptionDetailView: View {
             showingPersistenceError = true
         }
     }
+    
+    private func reactivateSubscription() async {
+        let previousStatus = subscription.status
+        let previousCancellationDate = subscription.cancellationDate
+        let previousUpdatedAt = subscription.updatedAt
 
+        subscription.status = .active
+        subscription.cancellationDate = nil
+        subscription.updatedAt = Date()
+
+        do {
+            try modelContext.save()
+        } catch {
+            subscription.status = previousStatus
+            subscription.cancellationDate = previousCancellationDate
+            subscription.updatedAt = previousUpdatedAt
+
+            persistenceErrorMessage = error.localizedDescription
+            showingPersistenceError = true
+            return
+        }
+
+        guard subscription.reminderEnabled else {
+            return
+        }
+
+        do {
+            let granted =
+                try await NotificationService.requestAuthorization()
+
+            if granted {
+                try await NotificationService.scheduleRenewalReminder(
+                    for: subscription
+                )
+            }
+        } catch {
+            print("Notification error: \(error)")
+        }
+    }
+    
     private func deleteSubscription() {
         modelContext.delete(subscription)
 
@@ -116,6 +164,11 @@ struct SubscriptionDetailView: View {
                 )
                 
                 LabeledContent(
+                    "Renewal Reminder",
+                    value: reminderStatusText
+                )
+                
+                LabeledContent(
                     "Category",
                     value: subscription.category
                 )
@@ -165,13 +218,15 @@ struct SubscriptionDetailView: View {
             
             Section {
                 if subscription.status == .active {
-                    Section {
-                        Button("Cancel Subscription", role: .destructive) {
-                            showingCancelConfirmation = true
-                        }
+                    Button("Cancel Subscription", role: .destructive) {
+                        showingCancelConfirmation = true
+                    }
+                } else {
+                    Button("Reactivate Subscription") {
+                        showingReactivateConfirmation = true
                     }
                 }
-                
+
                 Button("Delete Subscription", role: .destructive) {
                     showingDeleteConfirmation = true
                 }
@@ -220,7 +275,26 @@ struct SubscriptionDetailView: View {
                 "This will keep the subscription record but remove it from active spending totals."
             )
         }
+        
+        .alert(
+            "Reactivate \(subscription.name)?",
+            isPresented: $showingReactivateConfirmation
+        ) {
+            Button("Reactivate Subscription") {
+                Task {
+                    await reactivateSubscription()
+                }
+            }
 
+            Button("Keep Canceled", role: .cancel) {
+                showingReactivateConfirmation = false
+            }
+        } message: {
+            Text(
+                "This returns the subscription to active spending totals. Renewal reminders will resume if they are enabled."
+            )
+        }
+        
         .alert(
             "Delete \(subscription.name)?",
             isPresented: $showingDeleteConfirmation
