@@ -4,6 +4,7 @@ import SwiftData
 struct DashboardView: View {
     @Query private var subscriptions: [Subscription]
     @State private var showingAddSubscription = false
+    @State private var searchText = ""
     @State private var showingSettings = false
     @AppStorage(AppSettings.currencyCodeKey)
     
@@ -21,18 +22,43 @@ struct DashboardView: View {
         )
     }
     
-    private var activeSubscriptions: [Subscription] {
-        subscriptions.filter { $0.status == .active }
+    private var trimmedSearchText: String {
+        searchText.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
     }
-    
+
+    private var matchingSubscriptions: [Subscription] {
+        guard !trimmedSearchText.isEmpty else {
+            return subscriptions
+        }
+
+        return subscriptions.filter { subscription in
+            subscription.name.localizedStandardContains(
+                trimmedSearchText
+            )
+            || subscription.category.localizedStandardContains(
+                trimmedSearchText
+            )
+        }
+    }
+
+    private var activeSubscriptions: [Subscription] {
+        matchingSubscriptions.filter {
+            $0.status == .active
+        }
+    }
+
     private var upcomingSubscriptions: [Subscription] {
         activeSubscriptions.sorted {
             $0.nextBillingDate < $1.nextBillingDate
         }
     }
-    
+
     private var canceledSubscriptions: [Subscription] {
-        subscriptions.filter { $0.status == .canceled }
+        matchingSubscriptions.filter {
+            $0.status == .canceled
+        }
     }
     
     private func renewalStatusText(
@@ -117,9 +143,25 @@ struct DashboardView: View {
                                     .fontWeight(.semibold)
                                 
                                 if upcomingSubscriptions.isEmpty {
-                                    Text("No upcoming renewals yet.")
-                                        .foregroundStyle(.secondary)
+                                    if trimmedSearchText.isEmpty {
+                                        Text("No upcoming renewals yet.")
+                                            .foregroundStyle(.secondary)
+                                    } else if canceledSubscriptions.isEmpty {
+                                        ContentUnavailableView {
+                                            Label(
+                                                "No Matches",
+                                                systemImage: "magnifyingglass"
+                                            )
+                                        } description: {
+                                            Text(
+                                                "No subscriptions match \"\(trimmedSearchText)\"."
+                                            )
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 24)
+                                    }
                                 } else {
+                                    
                                     ForEach(upcomingSubscriptions) { subscription in
                                         NavigationLink {
                                             SubscriptionDetailView(
@@ -217,6 +259,10 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle("Subscriptions")
+            .searchable(
+                text: $searchText,
+                prompt: "Search by name or category"
+            )
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
