@@ -7,6 +7,7 @@ struct SubscriptionDetailView: View {
     @State private var showingEdit = false
     @State private var showingCancelConfirmation = false
     @State private var showingReactivateConfirmation = false
+    @State private var showingRenewedConfirmation = false
     @State private var showingDeleteConfirmation = false
     @State private var showingPersistenceError = false
     @State private var persistenceErrorMessage = ""
@@ -46,6 +47,59 @@ struct SubscriptionDetailView: View {
         }
 
         return subscription.reminderEnabled ? "On" : "Off"
+    }
+    
+    private var renewalDateAfterMarkingRenewed: Date? {
+        RenewalCalculator.nextRenewalDate(
+            after: subscription.nextBillingDate,
+            billingFrequency: subscription.billingFrequency
+        )
+    }
+    
+    private func markSubscriptionRenewed() async {
+        guard
+            subscription.status == .active,
+            let nextRenewalDate = renewalDateAfterMarkingRenewed
+        else {
+            persistenceErrorMessage =
+                "The next renewal date could not be calculated."
+            showingPersistenceError = true
+            return
+        }
+
+        let previousNextBillingDate =
+            subscription.nextBillingDate
+        let previousUpdatedAt = subscription.updatedAt
+
+        subscription.nextBillingDate = nextRenewalDate
+        subscription.updatedAt = Date()
+
+        do {
+            try modelContext.save()
+        } catch {
+            subscription.nextBillingDate =
+                previousNextBillingDate
+            subscription.updatedAt = previousUpdatedAt
+
+            persistenceErrorMessage = error.localizedDescription
+            showingPersistenceError = true
+            return
+        }
+
+        if subscription.reminderEnabled {
+            do {
+                try await NotificationService
+                    .scheduleRenewalReminder(
+                        for: subscription
+                    )
+            } catch {
+                print("Notification error: \(error)")
+            }
+        } else {
+            NotificationService.removeRenewalReminder(
+                for: subscription
+            )
+        }
     }
     
     private func cancelSubscription() {
@@ -174,6 +228,25 @@ struct SubscriptionDetailView: View {
                 )
             }
             
+            if subscription.status == .active {
+                Section("Renewal") {
+                    Button {
+                        showingRenewedConfirmation = true
+                    } label: {
+                        Label(
+                            "Mark as Renewed",
+                            systemImage: "checkmark.circle"
+                        )
+                    }
+
+                    Text(
+                        "Use this after the subscription renews. The next renewal date will move forward by one billing period."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            }
+            
             Section("Cost") {
                 LabeledContent(
                     "Monthly Equivalent",
@@ -257,6 +330,32 @@ struct SubscriptionDetailView: View {
             EditSubscriptionView(
                 subscription: subscription
             )
+        }
+        
+        .alert(
+            "Mark \(subscription.name) as renewed?",
+            isPresented: $showingRenewedConfirmation
+        ) {
+            Button("Mark as Renewed") {
+                Task {
+                    await markSubscriptionRenewed()
+                }
+            }
+
+            Button("Keep Current Date", role: .cancel) {
+                showingRenewedConfirmation = false
+            }
+        } message: {
+            if let nextRenewalDate =
+                renewalDateAfterMarkingRenewed {
+                Text(
+                    "The next renewal date will move from \(subscription.nextBillingDate.formatted(date: .abbreviated, time: .omitted)) to \(nextRenewalDate.formatted(date: .abbreviated, time: .omitted))."
+                )
+            } else {
+                Text(
+                    "The next renewal date could not be calculated."
+                )
+            }
         }
         
         .alert(
