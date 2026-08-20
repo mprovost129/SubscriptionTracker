@@ -557,4 +557,170 @@ struct SubscriptionTrackerTests {
         
         #expect(normalizedAmount == Decimal(11))
     }
+    
+    @Test
+    func csvExportIncludesExpectedHeadersAndValues() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        
+        let renewalDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 8,
+                day: 20
+            )
+        )!
+        
+        let subscription = Subscription(
+            name: "Netflix",
+            price: Decimal(string: "19.99")!,
+            billingFrequency: .monthly,
+            nextBillingDate: renewalDate,
+            category: SubscriptionCategory.streaming.rawValue,
+            notes: "Family plan",
+            reminderEnabled: true
+        )
+        
+        let csv = SubscriptionCSVExporter.csvString(
+            for: [subscription],
+            currencyCode: "USD",
+            calendar: calendar
+        )
+        
+        #expect(
+            csv.hasPrefix(
+                "\"Name\",\"Price\",\"Currency\",\"Billing Frequency\",\"Next Renewal Date\",\"Status\",\"Category\",\"Reminder Enabled\",\"Notes\",\"Cancellation Date\"\r\n"
+            )
+        )
+        
+        #expect(
+            csv.contains(
+                "\"Netflix\",\"19.99\",\"USD\",\"Monthly\",\"2026-08-20\",\"Active\",\"Streaming\",\"Yes\",\"Family plan\",\"\"\r\n"
+            )
+        )
+    }
+    
+    @Test
+    func csvExportEscapesCommasAndQuotationMarks() {
+        let subscription = Subscription(
+            name: "Movies, Music",
+            price: Decimal(15),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            notes: "Shared \"family\" plan"
+        )
+        
+        let csv = SubscriptionCSVExporter.csvString(
+            for: [subscription],
+            currencyCode: "USD"
+        )
+        
+        #expect(
+            csv.contains("\"Movies, Music\"")
+        )
+        
+        #expect(
+            csv.contains(
+                "\"Shared \"\"family\"\" plan\""
+            )
+        )
+    }
+    
+    @Test
+    func csvExportIncludesCanceledSubscriptionDetails() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        
+        let renewalDate = calendar.date(
+            from: DateComponents(
+                year: 2027,
+                month: 8,
+                day: 20
+            )
+        )!
+        
+        let cancellationDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 8,
+                day: 15
+            )
+        )!
+        
+        let subscription = Subscription(
+            name: "Annual Service",
+            price: Decimal(120),
+            billingFrequency: .yearly,
+            nextBillingDate: renewalDate,
+            category: SubscriptionCategory.software.rawValue,
+            reminderEnabled: false,
+            status: .canceled,
+            cancellationDate: cancellationDate
+        )
+        
+        let csv = SubscriptionCSVExporter.csvString(
+            for: [subscription],
+            currencyCode: "GBP",
+            calendar: calendar
+        )
+        
+        #expect(
+            csv.contains(
+                "\"Annual Service\",\"120\",\"GBP\",\"Yearly\",\"2027-08-20\",\"Canceled\",\"Software\",\"No\",\"\",\"2026-08-15\"\r\n"
+            )
+        )
+    }
+    
+    @Test
+    func csvExportCreatesNamedUTF8File() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        
+        let exportDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 8,
+                day: 20
+            )
+        )!
+        
+        let subscription = Subscription(
+            name: "Test",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: exportDate
+        )
+        
+        let fileURL = try SubscriptionCSVExporter
+            .createTemporaryFile(
+                for: [subscription],
+                currencyCode: "USD",
+                date: exportDate,
+                calendar: calendar
+            )
+        
+        defer {
+            try? FileManager.default.removeItem(
+                at: fileURL
+            )
+        }
+        
+        #expect(
+            fileURL.lastPathComponent ==
+            "SubscriptionTracker-Export-2026-08-20.csv"
+        )
+        
+        let fileData = try Data(contentsOf: fileURL)
+        let utf8ByteOrderMark = Data([
+            0xEF,
+            0xBB,
+            0xBF
+        ])
+        
+        #expect(
+            fileData.starts(
+                with: utf8ByteOrderMark
+            )
+        )
+    }
 }

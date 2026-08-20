@@ -102,7 +102,27 @@ struct SettingsView: View {
             }
             
             Section("Data") {
-                Button("Clear All Subscription Data", role: .destructive) {
+                ShareLink(
+                    item: csvExportFile,
+                    preview: SharePreview(csvExportFile.filename)
+                ) {
+                    Label(
+                        "Export Subscription Data",
+                        systemImage: "square.and.arrow.up"
+                    )
+                }
+                .disabled(subscriptions.isEmpty)
+
+                Text(
+                    "Creates a CSV copy that you can save or share. Your data stays on this device unless you choose to export it."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                Button(
+                    "Clear All Subscription Data",
+                    role: .destructive
+                ) {
                     showingClearDataConfirmation = true
                 }
                 .disabled(subscriptions.isEmpty)
@@ -152,6 +172,19 @@ struct SettingsView: View {
         } message: {
             Text(clearDataErrorMessage)
         }
+    }
+    
+    private var csvExportFile: SubscriptionCSVFile {
+        let csv = SubscriptionCSVExporter.csvString(
+            for: subscriptions,
+            currencyCode: currencyCode
+        )
+
+        return SubscriptionCSVFile(
+            csv: csv,
+            filename:
+                SubscriptionCSVExporter.exportFilename()
+        )
     }
     
     private var appVersion: String {
