@@ -227,6 +227,7 @@ struct SubscriptionDetailView: View {
                     value: subscription.category
                 )
             }
+            .headerProminence(.increased)
             
             if subscription.status == .active {
                 Section("Renewal") {
@@ -237,14 +238,18 @@ struct SubscriptionDetailView: View {
                             "Mark as Renewed",
                             systemImage: "checkmark.circle"
                         )
+                        .fontWeight(.semibold)
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.primary)
 
                     Text(
                         "Use this after the subscription renews. The next renewal date will move forward by one billing period."
                     )
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
                 }
+                .headerProminence(.increased)
             }
             
             Section("Cost") {
@@ -262,6 +267,7 @@ struct SubscriptionDetailView: View {
                     )
                 )
             }
+            .headerProminence(.increased)
             
             if subscription.status == .active {
                 Section("If You Cancel") {
@@ -279,6 +285,7 @@ struct SubscriptionDetailView: View {
                         )
                     )
                 }
+                .headerProminence(.increased)
             }
             
             Section {
@@ -294,6 +301,8 @@ struct SubscriptionDetailView: View {
                     Button("Cancel Subscription", role: .destructive) {
                         showingCancelConfirmation = true
                     }
+                    .font(.title3)
+                    .fontWeight(.semibold)
                 } else {
                     Button("Reactivate Subscription") {
                         showingReactivateConfirmation = true
@@ -303,6 +312,8 @@ struct SubscriptionDetailView: View {
                 Button("Delete Subscription", role: .destructive) {
                     showingDeleteConfirmation = true
                 }
+                .font(.title3)
+                .fontWeight(.semibold)
             }
             
             if let cancellationDate = subscription.cancellationDate {
