@@ -7,6 +7,8 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize)
+    private var dynamicTypeSize
     
     @Query private var subscriptions: [Subscription]
     
@@ -25,48 +27,78 @@ struct SettingsView: View {
     @AppStorage(AppSettings.reminderDaysBeforeKey)
     private var reminderDaysBefore =
     AppSettings.defaultReminderDaysBefore
+
+    private var currencyPicker: some View {
+        Picker(
+            "Default Currency",
+            selection: $currencyCode
+        ) {
+            Text("US Dollar (USD)")
+                .tag("USD")
+
+            Text("Canadian Dollar (CAD)")
+                .tag("CAD")
+
+            Text("Euro (EUR)")
+                .tag("EUR")
+
+            Text("British Pound (GBP)")
+                .tag("GBP")
+        }
+    }
+
+    private var reminderTimingPicker: some View {
+        Picker(
+            "Remind me",
+            selection: $reminderDaysBefore
+        ) {
+            Text("1 day before")
+                .tag(1)
+
+            Text("3 days before")
+                .tag(3)
+
+            Text("7 days before")
+                .tag(7)
+        }
+    }
     
     var body: some View {
         Form {
-            Section("Currency") {
-                Picker("Default Currency", selection: $currencyCode) {
-                    Text("US Dollar (USD)")
-                        .tag("USD")
-                    
-                    Text("Canadian Dollar (CAD)")
-                        .tag("CAD")
-                    
-                    Text("Euro (EUR)")
-                        .tag("EUR")
-                    
-                    Text("British Pound (GBP)")
-                        .tag("GBP")
+            Section {
+                if dynamicTypeSize.isAccessibilitySize {
+                    currencyPicker
+                        .pickerStyle(.inline)
+                } else {
+                    currencyPicker
                 }
+            } header: {
+                Text("Currency")
+                    .foregroundStyle(.primary)
             }
+            .headerProminence(.increased)
             
-            Section("Renewal Reminders") {
+            Section {
                 Toggle(
                     "Enable reminders by default",
                     isOn: $remindersEnabledByDefault
                 )
                 
-                Picker(
-                    "Remind me",
-                    selection: $reminderDaysBefore
-                ) {
-                    Text("1 day before")
-                        .tag(1)
-                    
-                    Text("3 days before")
-                        .tag(3)
-                    
-                    Text("7 days before")
-                        .tag(7)
+                if dynamicTypeSize.isAccessibilitySize {
+                    reminderTimingPicker
+                        .pickerStyle(.inline)
+                        .disabled(!remindersEnabledByDefault)
+                } else {
+                    reminderTimingPicker
+                        .disabled(!remindersEnabledByDefault)
                 }
-                .disabled(!remindersEnabledByDefault)
+            } header: {
+                Text("Renewal Reminders")
+                    .foregroundStyle(.primary)
             }
+            .headerProminence(.increased)
             
-            Section("About") {
+            Section {
                 LabeledContent(
                     "App",
                     value: "PDP Subscription Tracker"
@@ -80,9 +112,13 @@ struct SettingsView: View {
                 NavigationLink("Privacy") {
                     PrivacyView()
                 }
+            } header: {
+                Text("About")
+                    .foregroundStyle(.primary)
             }
+            .headerProminence(.increased)
             
-            Section("Notifications") {
+            Section {
                 LabeledContent(
                     "Permission",
                     value: notificationStatusText
@@ -93,15 +129,19 @@ struct SettingsView: View {
                         "Notifications are turned off in iOS Settings. PDP Subscription Tracker will continue to work, but renewal reminders cannot be delivered."
                     )
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
                     
                     Button("Open Notification Settings") {
                         openNotificationSettings()
                     }
                 }
+            } header: {
+                Text("Notifications")
+                    .foregroundStyle(.primary)
             }
+            .headerProminence(.increased)
             
-            Section("Data") {
+            Section {
                 ShareLink(
                     item: csvExportFile,
                     preview: SharePreview(csvExportFile.filename)
@@ -111,13 +151,16 @@ struct SettingsView: View {
                         systemImage: "square.and.arrow.up"
                     )
                 }
+                .buttonStyle(.plain)
+                .foregroundStyle(.primary)
+                .fontWeight(.semibold)
                 .disabled(subscriptions.isEmpty)
 
                 Text(
                     "Creates a CSV copy that you can save or share. Your data stays on this device unless you choose to export it."
                 )
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary)
 
                 Button(
                     "Clear All Subscription Data",
@@ -125,8 +168,14 @@ struct SettingsView: View {
                 ) {
                     showingClearDataConfirmation = true
                 }
+                .font(.title3)
+                .fontWeight(.semibold)
                 .disabled(subscriptions.isEmpty)
+            } header: {
+                Text("Data")
+                    .foregroundStyle(.primary)
             }
+            .headerProminence(.increased)
         }
         .navigationTitle("Settings")
         .toolbar {
