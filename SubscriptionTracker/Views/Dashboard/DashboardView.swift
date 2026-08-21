@@ -6,8 +6,11 @@ struct DashboardView: View {
     @State private var showingAddSubscription = false
     @State private var searchText = ""
     @State private var showingSettings = false
-    @AppStorage(AppSettings.currencyCodeKey)
     
+    @Environment(\.dynamicTypeSize)
+    private var dynamicTypeSize
+    
+    @AppStorage(AppSettings.currencyCodeKey)
     private var currencyCode = AppSettings.defaultCurrencyCode
     
     private var monthlyTotal: Decimal {
@@ -61,6 +64,24 @@ struct DashboardView: View {
         }
     }
     
+    private var subscriptionRowLayout: AnyLayout {
+        if dynamicTypeSize.isAccessibilitySize {
+            return AnyLayout(
+                VStackLayout(
+                    alignment: .leading,
+                    spacing: 8
+                )
+            )
+        }
+
+        return AnyLayout(
+            HStackLayout(
+                alignment: .center,
+                spacing: 12
+            )
+        )
+    }
+    
     private func renewalStatusText(
         for subscription: Subscription
     ) -> String {
@@ -112,7 +133,7 @@ struct DashboardView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Monthly")
                                     .font(.headline)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.primary)
                                 
                                 Text(
                                     monthlyTotal,
@@ -122,10 +143,19 @@ struct DashboardView: View {
                                 .fontWeight(.bold)
                             }
                             
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("Monthly subscription total")
+                            .accessibilityValue(
+                                Text(
+                                    monthlyTotal,
+                                    format: .currency(code: currencyCode)
+                                )
+                            )
+                            
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Yearly")
                                     .font(.headline)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.primary)
                                 
                                 Text(
                                     annualTotal,
@@ -134,6 +164,15 @@ struct DashboardView: View {
                                 .font(.title)
                                 .fontWeight(.semibold)
                             }
+                            
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("Yearly subscription total")
+                            .accessibilityValue(
+                                Text(
+                                    annualTotal,
+                                    format: .currency(code: currencyCode)
+                                )
+                            )
                             
                             Divider()
                             
@@ -145,7 +184,7 @@ struct DashboardView: View {
                                 if upcomingSubscriptions.isEmpty {
                                     if trimmedSearchText.isEmpty {
                                         Text("No upcoming renewals yet.")
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(.primary)
                                     } else if canceledSubscriptions.isEmpty {
                                         ContentUnavailableView {
                                             Label(
@@ -168,7 +207,7 @@ struct DashboardView: View {
                                                 subscription: subscription
                                             )
                                         } label: {
-                                            HStack {
+                                            subscriptionRowLayout {
                                                 VStack(alignment: .leading, spacing: 3) {
                                                     Text(subscription.name)
                                                         .font(.headline)
@@ -190,7 +229,7 @@ struct DashboardView: View {
                                                             : "bell.slash"
                                                     )
                                                     .font(.caption2)
-                                                    .foregroundStyle(.secondary)
+                                                    .foregroundStyle(.primary)
                                                     
                                                     Text(
                                                         subscription
@@ -201,10 +240,12 @@ struct DashboardView: View {
                                                             )
                                                     )
                                                     .font(.caption2)
-                                                    .foregroundStyle(.secondary)
+                                                    .foregroundStyle(.primary)
                                                 }
-                                                
-                                                Spacer()
+                                                .frame(
+                                                    maxWidth: .infinity,
+                                                    alignment: .leading
+                                                )
                                                 
                                                 Text(
                                                     subscription.price.formatted(
@@ -235,17 +276,21 @@ struct DashboardView: View {
                                                     subscription: subscription
                                                 )
                                             } label: {
-                                                HStack {
-                                                    Text(subscription.name)
-                                                    
-                                                    Spacer()
+                                                subscriptionRowLayout {
+                                                    VStack(alignment: .leading, spacing: 3) {
+                                                        Text(subscription.name)
+                                                    }
+                                                    .frame(
+                                                        maxWidth: .infinity,
+                                                        alignment: .leading
+                                                    )
                                                     
                                                     Text(
                                                         subscription.price.formatted(
                                                             .currency(code: currencyCode)
                                                         )
                                                     )
-                                                    .foregroundStyle(.secondary)
+                                                    .foregroundStyle(.primary)
                                                 }
                                             }
                                             .buttonStyle(.plain)
@@ -259,9 +304,18 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle("Subscriptions")
+            .navigationBarTitleDisplayMode(
+                dynamicTypeSize.isAccessibilitySize
+                    ? .inline
+                    : .large
+            )
             .searchable(
                 text: $searchText,
-                prompt: "Search by name or category"
+                prompt: Text(
+                    dynamicTypeSize.isAccessibilitySize
+                        ? "Search"
+                        : "Search by name or category"
+                )
             )
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
