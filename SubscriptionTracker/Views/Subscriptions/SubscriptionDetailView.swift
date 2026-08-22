@@ -307,6 +307,9 @@ struct SubscriptionDetailView: View {
                     Button("Reactivate Subscription") {
                         showingReactivateConfirmation = true
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.primary)
+                    .fontWeight(.semibold)
                 }
 
                 Button("Delete Subscription", role: .destructive) {
