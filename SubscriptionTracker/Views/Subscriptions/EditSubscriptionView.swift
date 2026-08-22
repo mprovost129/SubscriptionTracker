@@ -5,6 +5,8 @@ struct EditSubscriptionView: View {
     
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dynamicTypeSize)
+    private var dynamicTypeSize
     
     let subscription: Subscription
 
@@ -66,36 +68,48 @@ struct EditSubscriptionView: View {
 
         return true
     }
+
+    private var billingPicker: some View {
+        Picker(
+            "Billing",
+            selection: $billingFrequency
+        ) {
+            Text("Monthly")
+                .tag(BillingFrequency.monthly)
+
+            Text("Yearly")
+                .tag(BillingFrequency.yearly)
+        }
+    }
     
     var body: some View {
         NavigationStack {
             Form {
-                Section("Subscription") {
+                Section {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Name")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
 
-                        TextField("Subscription name", text: $name)
+                        TextField("", text: $name)
                             .accessibilityLabel("Name")
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Price")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
 
-                        TextField("0.00", text: $price)
+                        TextField("", text: $price)
                             .keyboardType(.decimalPad)
                             .accessibilityLabel("Price")
                     }
                     
-                    Picker("Billing", selection: $billingFrequency) {
-                        Text("Monthly")
-                            .tag(BillingFrequency.monthly)
-
-                        Text("Yearly")
-                            .tag(BillingFrequency.yearly)
+                    if dynamicTypeSize.isAccessibilitySize {
+                        billingPicker
+                    } else {
+                        billingPicker
+                            .pickerStyle(.segmented)
                     }
 
                     DatePicker(
@@ -117,9 +131,13 @@ struct EditSubscriptionView: View {
                                 .foregroundStyle(.red)
                         }
                     }
+                } header: {
+                    Text("Subscription")
+                        .foregroundStyle(.primary)
                 }
+                .headerProminence(.increased)
 
-                Section("Details") {
+                Section {
                     Picker("Category", selection: $category) {
                         ForEach(SubscriptionCategory.allCases, id: \.self) { category in
                             Text(category.rawValue)
@@ -127,8 +145,19 @@ struct EditSubscriptionView: View {
                         }
                     }
 
-                    TextField("Notes", text: $notes, axis: .vertical)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Notes")
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+
+                        TextField(
+                            "",
+                            text: $notes,
+                            axis: .vertical
+                        )
                         .lineLimit(3...6)
+                        .accessibilityLabel("Notes")
+                    }
 
                     Toggle(
                         "Renewal Reminder",
@@ -140,9 +169,13 @@ struct EditSubscriptionView: View {
                             "Reminder will be sent \(reminderDaysBefore) days before renewal."
                         )
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                     }
+                } header: {
+                    Text("Details")
+                        .foregroundStyle(.primary)
                 }
+                .headerProminence(.increased)
             }
             .navigationTitle("Edit Subscription")
             .navigationBarTitleDisplayMode(.inline)
