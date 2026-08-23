@@ -886,4 +886,158 @@ struct SubscriptionTrackerTests {
             ]
         )
     }
+
+    @Test
+    func insightsGroupsAndRanksCategorySpending() {
+        let subscriptions = [
+            Subscription(
+                name: "Streaming Monthly",
+                price: Decimal(20),
+                billingFrequency: .monthly,
+                nextBillingDate: Date(),
+                category:
+                    SubscriptionCategory.streaming.rawValue
+            ),
+            Subscription(
+                name: "Streaming Yearly",
+                price: Decimal(120),
+                billingFrequency: .yearly,
+                nextBillingDate: Date(),
+                category:
+                    SubscriptionCategory.streaming.rawValue
+            ),
+            Subscription(
+                name: "Software",
+                price: Decimal(15),
+                billingFrequency: .monthly,
+                nextBillingDate: Date(),
+                category:
+                    SubscriptionCategory.software.rawValue
+            )
+        ]
+
+        let insights =
+            SubscriptionInsightsCalculator
+                .spendingByCategory(
+                    for: subscriptions
+                )
+
+        #expect(insights.count == 2)
+        #expect(
+            insights[0].category ==
+                SubscriptionCategory.streaming.rawValue
+        )
+        #expect(insights[0].monthlyCost == Decimal(30))
+        #expect(insights[0].annualCost == Decimal(360))
+
+        #expect(
+            insights[1].category ==
+                SubscriptionCategory.software.rawValue
+        )
+        #expect(insights[1].monthlyCost == Decimal(15))
+        #expect(insights[1].annualCost == Decimal(180))
+    }
+
+    @Test
+    func insightsExcludeCanceledSubscriptions() {
+        let activeSubscription = Subscription(
+            name: "Active",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            category:
+                SubscriptionCategory.productivity.rawValue
+        )
+
+        let canceledSubscription = Subscription(
+            name: "Canceled",
+            price: Decimal(100),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            category:
+                SubscriptionCategory.business.rawValue,
+            status: .canceled
+        )
+
+        let insights =
+            SubscriptionInsightsCalculator
+                .spendingByCategory(
+                    for: [
+                        activeSubscription,
+                        canceledSubscription
+                    ]
+                )
+
+        #expect(insights.count == 1)
+        #expect(
+            insights[0].category ==
+                SubscriptionCategory.productivity.rawValue
+        )
+        #expect(insights[0].monthlyCost == Decimal(10))
+    }
+
+    @Test
+    func insightsTreatBlankCategoryAsOther() {
+        let subscription = Subscription(
+            name: "Uncategorized",
+            price: Decimal(12),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            category: "   "
+        )
+
+        let insights =
+            SubscriptionInsightsCalculator
+                .spendingByCategory(
+                    for: [subscription]
+                )
+
+        #expect(insights.count == 1)
+        #expect(
+            insights[0].category ==
+                SubscriptionCategory.other.rawValue
+        )
+    }
+
+    @Test
+    func insightsRankLargestSubscriptionsByMonthlyCost() {
+        let monthlySubscription = Subscription(
+            name: "Monthly Plus",
+            price: Decimal(15),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        let yearlySubscription = Subscription(
+            name: "Yearly Pro",
+            price: Decimal(240),
+            billingFrequency: .yearly,
+            nextBillingDate: Date()
+        )
+
+        let canceledSubscription = Subscription(
+            name: "Canceled Premium",
+            price: Decimal(100),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            status: .canceled
+        )
+
+        let rankedSubscriptions =
+            SubscriptionInsightsCalculator
+                .largestSubscriptions(
+                    from: [
+                        monthlySubscription,
+                        yearlySubscription,
+                        canceledSubscription
+                    ]
+                )
+
+        #expect(
+            rankedSubscriptions.map(\.name) == [
+                "Yearly Pro",
+                "Monthly Plus"
+            ]
+        )
+    }
 }

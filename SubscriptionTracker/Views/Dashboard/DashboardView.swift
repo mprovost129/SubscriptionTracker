@@ -15,6 +15,7 @@ struct DashboardView: View {
         SubscriptionBillingFilter = .all
     
     @State private var showingSettings = false
+    @State private var showingInsights = false
     
     @Environment(\.dynamicTypeSize)
     private var dynamicTypeSize
@@ -461,17 +462,38 @@ struct DashboardView: View {
                             : "Default options"
                     )
 
-                    Button {
-                        showingSettings = true
+                    Menu {
+                        Button {
+                            showingInsights = true
+                        } label: {
+                            Label(
+                                "Insights",
+                                systemImage: "chart.bar.xaxis"
+                            )
+                        }
+
+                        Button {
+                            showingSettings = true
+                        } label: {
+                            Label(
+                                "Settings",
+                                systemImage: "gearshape"
+                            )
+                        }
                     } label: {
                         Image(systemName: "ellipsis")
                     }
-                    .accessibilityLabel("Settings")
+                    .accessibilityLabel("More Options")
                 }
             }
         }
         .sheet(isPresented: $showingAddSubscription) {
             AddSubscriptionView()
+        }
+        .sheet(isPresented: $showingInsights) {
+            NavigationStack {
+                InsightsView()
+            }
         }
         .sheet(isPresented: $showingSettings) {
             NavigationStack {
