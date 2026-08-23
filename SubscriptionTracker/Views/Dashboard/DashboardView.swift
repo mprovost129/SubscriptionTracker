@@ -5,6 +5,15 @@ struct DashboardView: View {
     @Query private var subscriptions: [Subscription]
     @State private var showingAddSubscription = false
     @State private var searchText = ""
+    @State private var sortOption:
+        SubscriptionSortOption = .renewalDate
+    
+    @State private var statusFilter:
+        SubscriptionStatusFilter = .all
+    
+    @State private var billingFilter:
+        SubscriptionBillingFilter = .all
+    
     @State private var showingSettings = false
     
     @Environment(\.dynamicTypeSize)
@@ -46,22 +55,45 @@ struct DashboardView: View {
         }
     }
 
+    private var organizedSubscriptions: [Subscription] {
+        SubscriptionListOrganizer.organize(
+            matchingSubscriptions,
+            statusFilter: statusFilter,
+            billingFilter: billingFilter,
+            sortOption: sortOption
+        )
+    }
+
     private var activeSubscriptions: [Subscription] {
-        matchingSubscriptions.filter {
+        organizedSubscriptions.filter {
             $0.status == .active
         }
     }
 
     private var upcomingSubscriptions: [Subscription] {
-        activeSubscriptions.sorted {
-            $0.nextBillingDate < $1.nextBillingDate
-        }
+        activeSubscriptions
     }
 
     private var canceledSubscriptions: [Subscription] {
-        matchingSubscriptions.filter {
+        organizedSubscriptions.filter {
             $0.status == .canceled
         }
+    }
+    
+    private var filtersAreActive: Bool {
+        statusFilter != .all
+        || billingFilter != .all
+    }
+    
+    private var listOptionsAreModified: Bool {
+        filtersAreActive
+        || sortOption != .renewalDate
+    }
+    
+    private func resetListOptions() {
+        sortOption = .renewalDate
+        statusFilter = .all
+        billingFilter = .all
     }
     
     private var subscriptionRowLayout: AnyLayout {
@@ -182,22 +214,56 @@ struct DashboardView: View {
                                     .fontWeight(.semibold)
                                 
                                 if upcomingSubscriptions.isEmpty {
-                                    if trimmedSearchText.isEmpty {
-                                        Text("No upcoming renewals yet.")
-                                            .foregroundStyle(.primary)
-                                    } else if canceledSubscriptions.isEmpty {
-                                        ContentUnavailableView {
-                                            Label(
-                                                "No Matches",
-                                                systemImage: "magnifyingglass"
-                                            )
-                                        } description: {
-                                            Text(
-                                                "No subscriptions match \"\(trimmedSearchText)\"."
-                                            )
+                                    if canceledSubscriptions.isEmpty {
+                                        if !trimmedSearchText.isEmpty {
+                                            ContentUnavailableView {
+                                                Label(
+                                                    filtersAreActive
+                                                        ? "No Filtered Matches"
+                                                        : "No Matches",
+                                                    systemImage: "magnifyingglass"
+                                                )
+                                            } description: {
+                                                Text(
+                                                    filtersAreActive
+                                                        ? "No subscriptions match your search and current filters."
+                                                        : "No subscriptions match \"\(trimmedSearchText)\"."
+                                                )
+                                            } actions: {
+                                                Button("Clear Search") {
+                                                    searchText = ""
+                                                }
+
+                                                if filtersAreActive {
+                                                    Button("Reset Filters") {
+                                                        resetListOptions()
+                                                    }
+                                                }
+                                            }
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 24)
+                                        } else if filtersAreActive {
+                                            ContentUnavailableView {
+                                                Label(
+                                                    "No Filtered Subscriptions",
+                                                    systemImage:
+                                                        "line.3.horizontal.decrease.circle"
+                                                )
+                                            } description: {
+                                                Text(
+                                                    "No subscriptions match the selected filters."
+                                                )
+                                            } actions: {
+                                                Button("Reset Filters") {
+                                                    resetListOptions()
+                                                }
+                                            }
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 24)
+                                        } else {
+                                            Text("No upcoming renewals yet.")
+                                                .foregroundStyle(.primary)
                                         }
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 24)
                                     }
                                 } else {
                                     
@@ -326,6 +392,75 @@ struct DashboardView: View {
                     }
                     .accessibilityLabel("Add Subscription")
                     
+                    Menu {
+                        Section("Sort") {
+                            Picker(
+                                "Sort Subscriptions",
+                                selection: $sortOption
+                            ) {
+                                ForEach(
+                                    SubscriptionSortOption.allCases
+                                ) { option in
+                                    Text(option.rawValue)
+                                        .tag(option)
+                                }
+                            }
+                        }
+
+                        Section("Status") {
+                            Picker(
+                                "Filter by Status",
+                                selection: $statusFilter
+                            ) {
+                                ForEach(
+                                    SubscriptionStatusFilter.allCases
+                                ) { filter in
+                                    Text(filter.rawValue)
+                                        .tag(filter)
+                                }
+                            }
+                        }
+
+                        Section("Billing") {
+                            Picker(
+                                "Filter by Billing",
+                                selection: $billingFilter
+                            ) {
+                                ForEach(
+                                    SubscriptionBillingFilter.allCases
+                                ) { filter in
+                                    Text(filter.rawValue)
+                                        .tag(filter)
+                                }
+                            }
+                        }
+
+                        if listOptionsAreModified {
+                            Divider()
+
+                            Button {
+                                resetListOptions()
+                            } label: {
+                                Label(
+                                    "Reset Sort and Filters",
+                                    systemImage: "arrow.counterclockwise"
+                                )
+                            }
+                        }
+                    } label: {
+                        Image(
+                            systemName: listOptionsAreModified
+                                ? "line.3.horizontal.decrease.circle.fill"
+                                : "line.3.horizontal.decrease.circle"
+                        )
+                    }
+                    .accessibilityLabel("Sort and Filter")
+                    .accessibilityValue(
+                        listOptionsAreModified
+                            ? "Options applied"
+                            : "Default options"
+                    )
+
                     Button {
                         showingSettings = true
                     } label: {

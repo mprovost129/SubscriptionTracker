@@ -723,4 +723,167 @@ struct SubscriptionTrackerTests {
             )
         )
     }
+    
+    @Test
+    func subscriptionOrganizerFiltersByStatus() {
+        let activeSubscription = Subscription(
+            name: "Active Service",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            status: .active
+        )
+
+        let canceledSubscription = Subscription(
+            name: "Canceled Service",
+            price: Decimal(20),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            status: .canceled
+        )
+
+        let result = SubscriptionListOrganizer.organize(
+            [
+                activeSubscription,
+                canceledSubscription
+            ],
+            statusFilter: .active,
+            billingFilter: .all,
+            sortOption: .name
+        )
+
+        #expect(
+            result.map(\.name) ==
+            ["Active Service"]
+        )
+    }
+
+    @Test
+    func subscriptionOrganizerFiltersByBillingFrequency() {
+        let monthlySubscription = Subscription(
+            name: "Monthly Service",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        let yearlySubscription = Subscription(
+            name: "Yearly Service",
+            price: Decimal(120),
+            billingFrequency: .yearly,
+            nextBillingDate: Date()
+        )
+
+        let result = SubscriptionListOrganizer.organize(
+            [
+                monthlySubscription,
+                yearlySubscription
+            ],
+            statusFilter: .all,
+            billingFilter: .yearly,
+            sortOption: .name
+        )
+
+        #expect(
+            result.map(\.name) ==
+            ["Yearly Service"]
+        )
+    }
+
+    @Test
+    func subscriptionOrganizerSortsByPrice() {
+        let lowerPrice = Subscription(
+            name: "Lower Price",
+            price: Decimal(5),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        let higherPrice = Subscription(
+            name: "Higher Price",
+            price: Decimal(25),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        let subscriptions = [
+            lowerPrice,
+            higherPrice
+        ]
+
+        let highToLow =
+            SubscriptionListOrganizer.organize(
+                subscriptions,
+                statusFilter: .all,
+                billingFilter: .all,
+                sortOption: .priceHighToLow
+            )
+
+        let lowToHigh =
+            SubscriptionListOrganizer.organize(
+                subscriptions,
+                statusFilter: .all,
+                billingFilter: .all,
+                sortOption: .priceLowToHigh
+            )
+
+        #expect(
+            highToLow.map(\.name) ==
+            [
+                "Higher Price",
+                "Lower Price"
+            ]
+        )
+
+        #expect(
+            lowToHigh.map(\.name) ==
+            [
+                "Lower Price",
+                "Higher Price"
+            ]
+        )
+    }
+
+    @Test
+    func subscriptionOrganizerSortsByRenewalDate() {
+        let earlierDate = Date(
+            timeIntervalSince1970: 1_000
+        )
+
+        let laterDate = Date(
+            timeIntervalSince1970: 2_000
+        )
+
+        let laterSubscription = Subscription(
+            name: "Later Renewal",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: laterDate
+        )
+
+        let earlierSubscription = Subscription(
+            name: "Earlier Renewal",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: earlierDate
+        )
+
+        let result = SubscriptionListOrganizer.organize(
+            [
+                laterSubscription,
+                earlierSubscription
+            ],
+            statusFilter: .all,
+            billingFilter: .all,
+            sortOption: .renewalDate
+        )
+
+        #expect(
+            result.map(\.name) ==
+            [
+                "Earlier Renewal",
+                "Later Renewal"
+            ]
+        )
+    }
 }
