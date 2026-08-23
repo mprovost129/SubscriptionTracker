@@ -234,11 +234,17 @@ struct DashboardView: View {
                                                 Button("Clear Search") {
                                                     searchText = ""
                                                 }
+                                                .buttonStyle(.bordered)
+                                                .controlSize(.large)
+                                                .foregroundStyle(.primary)
 
                                                 if filtersAreActive {
                                                     Button("Reset Filters") {
                                                         resetListOptions()
                                                     }
+                                                    .buttonStyle(.bordered)
+                                                    .controlSize(.large)
+                                                    .foregroundStyle(.primary)
                                                 }
                                             }
                                             .frame(maxWidth: .infinity)
@@ -258,6 +264,9 @@ struct DashboardView: View {
                                                 Button("Reset Filters") {
                                                     resetListOptions()
                                                 }
+                                                .buttonStyle(.bordered)
+                                                .controlSize(.large)
+                                                .foregroundStyle(.primary)
                                             }
                                             .frame(maxWidth: .infinity)
                                             .padding(.vertical, 24)
