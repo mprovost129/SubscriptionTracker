@@ -129,6 +129,10 @@ struct InsightsView: View {
                             .fontWeight(.semibold)
                         }
                     }
+                    .frame(
+                        maxWidth: .infinity,
+                        alignment: .leading
+                    )
                     .padding()
                     .accessibilityElement(
                         children: .combine
