@@ -16,6 +16,7 @@ struct DashboardView: View {
     
     @State private var showingSettings = false
     @State private var showingInsights = false
+    @State private var showingRenewalCalendar = false
     
     @Environment(\.dynamicTypeSize)
     private var dynamicTypeSize
@@ -473,6 +474,15 @@ struct DashboardView: View {
 
                     Menu {
                         Button {
+                            showingRenewalCalendar = true
+                        } label: {
+                            Label(
+                                "Renewal Calendar",
+                                systemImage: "calendar"
+                            )
+                        }
+
+                        Button {
                             showingInsights = true
                         } label: {
                             Label(
@@ -503,6 +513,13 @@ struct DashboardView: View {
             NavigationStack {
                 InsightsView()
             }
+        }
+        .sheet(
+            isPresented: $showingRenewalCalendar
+        ) {
+            RenewalCalendarView(
+                subscriptions: subscriptions
+            )
         }
         .sheet(isPresented: $showingSettings) {
             NavigationStack {
