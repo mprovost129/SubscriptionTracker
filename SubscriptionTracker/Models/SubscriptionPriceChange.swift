@@ -12,6 +12,35 @@ final class SubscriptionPriceChange {
     var changedAt: Date
     var subscription: Subscription?
 
+    var previousMonthlyEquivalent: Decimal {
+        SubscriptionCalculator.monthlyEquivalent(
+            price: previousPrice,
+            billingFrequency: previousBillingFrequency
+        )
+    }
+
+    var newMonthlyEquivalent: Decimal {
+        SubscriptionCalculator.monthlyEquivalent(
+            price: newPrice,
+            billingFrequency: newBillingFrequency
+        )
+    }
+
+    var monthlyEquivalentDifference: Decimal {
+        newMonthlyEquivalent - previousMonthlyEquivalent
+    }
+
+    var percentageDifference: Decimal? {
+        guard previousMonthlyEquivalent != 0 else {
+            return nil
+        }
+
+        return (
+            monthlyEquivalentDifference /
+            previousMonthlyEquivalent
+        ) * 100
+    }
+
     init(
         previousPrice: Decimal,
         newPrice: Decimal,
