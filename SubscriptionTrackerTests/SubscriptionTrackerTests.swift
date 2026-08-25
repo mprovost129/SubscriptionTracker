@@ -1040,4 +1040,161 @@ struct SubscriptionTrackerTests {
             ]
         )
     }
+
+    @Test
+    func renewalCalendarReturnsEveryDayInThirtyOneDayMonth() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let date = calendar.date(
+            from: DateComponents(
+                year: 2027,
+                month: 1,
+                day: 15
+            )
+        )!
+
+        let days = RenewalCalendarCalculator.days(
+            inMonthContaining: date,
+            calendar: calendar
+        )
+
+        #expect(days.count == 31)
+        #expect(calendar.component(.day, from: days.first!) == 1)
+        #expect(calendar.component(.day, from: days.last!) == 31)
+    }
+
+    @Test
+    func renewalCalendarHandlesLeapYearFebruary() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let date = calendar.date(
+            from: DateComponents(
+                year: 2028,
+                month: 2,
+                day: 10
+            )
+        )!
+
+        let days = RenewalCalendarCalculator.days(
+            inMonthContaining: date,
+            calendar: calendar
+        )
+
+        #expect(days.count == 29)
+        #expect(calendar.component(.day, from: days.last!) == 29)
+    }
+
+    @Test
+    func renewalCalendarReturnsOnlyActiveSubscriptionsForDay() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let renewalDate = calendar.date(
+            from: DateComponents(
+                year: 2027,
+                month: 3,
+                day: 12
+            )
+        )!
+
+        let activeSubscription = Subscription(
+            name: "Active Service",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: renewalDate
+        )
+
+        let canceledSubscription = Subscription(
+            name: "Canceled Service",
+            price: Decimal(20),
+            billingFrequency: .monthly,
+            nextBillingDate: renewalDate,
+            status: .canceled
+        )
+
+        let results = RenewalCalendarCalculator
+            .activeSubscriptions(
+                on: renewalDate,
+                from: [
+                    canceledSubscription,
+                    activeSubscription
+                ],
+                calendar: calendar
+            )
+
+        #expect(results.count == 1)
+        #expect(results.first?.name == "Active Service")
+    }
+
+    @Test
+    func renewalCalendarSortsSameDaySubscriptionsByName() {
+        let renewalDate = Date()
+
+        let zebra = Subscription(
+            name: "Zebra",
+            price: Decimal(20),
+            billingFrequency: .monthly,
+            nextBillingDate: renewalDate
+        )
+
+        let alpha = Subscription(
+            name: "Alpha",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: renewalDate
+        )
+
+        let results = RenewalCalendarCalculator
+            .activeSubscriptions(
+                on: renewalDate,
+                from: [zebra, alpha]
+            )
+
+        #expect(
+            results.map(\.name) == [
+                "Alpha",
+                "Zebra"
+            ]
+        )
+    }
+
+    @Test
+    func renewalCalendarCalculatesDailyChargeTotal() {
+        let renewalDate = Date()
+
+        let monthlyService = Subscription(
+            name: "Monthly Service",
+            price: Decimal(string: "19.99")!,
+            billingFrequency: .monthly,
+            nextBillingDate: renewalDate
+        )
+
+        let yearlyService = Subscription(
+            name: "Yearly Service",
+            price: Decimal(120),
+            billingFrequency: .yearly,
+            nextBillingDate: renewalDate
+        )
+
+        let total = RenewalCalendarCalculator.totalCharges(
+            on: renewalDate,
+            from: [
+                monthlyService,
+                yearlyService
+            ]
+        )
+
+        #expect(total == Decimal(string: "139.99")!)
+        #expect(
+            RenewalCalendarCalculator.hasRenewals(
+                on: renewalDate,
+                from: [
+                    monthlyService,
+                    yearlyService
+                ]
+            )
+        )
+    }
 }
