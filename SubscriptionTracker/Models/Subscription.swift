@@ -38,6 +38,11 @@ final class Subscription {
     var cancellationDate: Date?
     var createdAt: Date
     var updatedAt: Date
+    @Relationship(
+        deleteRule: .cascade,
+        inverse: \SubscriptionPriceChange.subscription
+    )
+    var priceChanges: [SubscriptionPriceChange] = []
     
     init(
         name: String,

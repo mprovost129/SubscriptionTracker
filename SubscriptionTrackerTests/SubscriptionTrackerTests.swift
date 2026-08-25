@@ -1197,4 +1197,118 @@ struct SubscriptionTrackerTests {
             )
         )
     }
+
+    @Test
+    func priceChangeRecorderRecordsPriceChange() {
+        let subscription = Subscription(
+            name: "Streaming",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        let recorded =
+            SubscriptionPriceChangeRecorder.recordChange(
+                for: subscription,
+                newPrice: Decimal(12),
+                newBillingFrequency: .monthly
+            )
+
+        #expect(recorded)
+        #expect(subscription.priceChanges.count == 1)
+
+        let change = subscription.priceChanges[0]
+
+        #expect(change.previousPrice == Decimal(10))
+        #expect(change.newPrice == Decimal(12))
+        #expect(
+            change.previousBillingFrequency == .monthly
+        )
+        #expect(
+            change.newBillingFrequency == .monthly
+        )
+    }
+
+    @Test
+    func priceChangeRecorderRecordsBillingFrequencyChange() {
+        let subscription = Subscription(
+            name: "Software",
+            price: Decimal(120),
+            billingFrequency: .yearly,
+            nextBillingDate: Date()
+        )
+
+        let recorded =
+            SubscriptionPriceChangeRecorder.recordChange(
+                for: subscription,
+                newPrice: Decimal(120),
+                newBillingFrequency: .monthly
+            )
+
+        #expect(recorded)
+        #expect(subscription.priceChanges.count == 1)
+
+        let change = subscription.priceChanges[0]
+
+        #expect(
+            change.previousBillingFrequency == .yearly
+        )
+        #expect(
+            change.newBillingFrequency == .monthly
+        )
+    }
+
+    @Test
+    func priceChangeRecorderDoesNotRecordUnchangedValues() {
+        let subscription = Subscription(
+            name: "Cloud Storage",
+            price: Decimal(15),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        let recorded =
+            SubscriptionPriceChangeRecorder.recordChange(
+                for: subscription,
+                newPrice: Decimal(15),
+                newBillingFrequency: .monthly
+            )
+
+        #expect(recorded == false)
+        #expect(subscription.priceChanges.isEmpty)
+    }
+
+    @Test
+    func priceChangeRecorderPreservesMultipleChanges() {
+        let subscription = Subscription(
+            name: "AI Service",
+            price: Decimal(20),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        SubscriptionPriceChangeRecorder.recordChange(
+            for: subscription,
+            newPrice: Decimal(25),
+            newBillingFrequency: .monthly
+        )
+
+        subscription.price = Decimal(25)
+
+        SubscriptionPriceChangeRecorder.recordChange(
+            for: subscription,
+            newPrice: Decimal(30),
+            newBillingFrequency: .monthly
+        )
+
+        #expect(subscription.priceChanges.count == 2)
+        #expect(
+            subscription.priceChanges[0].previousPrice ==
+            Decimal(20)
+        )
+        #expect(
+            subscription.priceChanges[1].previousPrice ==
+            Decimal(25)
+        )
+    }
 }

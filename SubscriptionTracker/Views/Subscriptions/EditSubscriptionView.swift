@@ -213,6 +213,15 @@ struct EditSubscriptionView: View {
             return
         }
 
+        let changedAt = Date()
+
+        SubscriptionPriceChangeRecorder.recordChange(
+            for: subscription,
+            newPrice: normalizedPrice,
+            newBillingFrequency: billingFrequency,
+            changedAt: changedAt
+        )
+
         subscription.name = name.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
@@ -222,7 +231,7 @@ struct EditSubscriptionView: View {
         subscription.category = category.rawValue
         subscription.notes = notes
         subscription.reminderEnabled = reminderEnabled
-        subscription.updatedAt = Date()
+        subscription.updatedAt = changedAt
         
         do {
             try modelContext.save()

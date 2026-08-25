@@ -13,6 +13,7 @@ struct SubscriptionTrackerApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Subscription.self,
+            SubscriptionPriceChange.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
