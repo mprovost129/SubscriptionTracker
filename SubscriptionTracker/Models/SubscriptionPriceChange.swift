@@ -59,3 +59,44 @@ final class SubscriptionPriceChange {
         self.subscription = subscription
     }
 }
+
+struct SubscriptionPriceHistorySummary {
+
+    let originalMonthlyEquivalent: Decimal
+    let currentMonthlyEquivalent: Decimal
+    let monthlyEquivalentDifference: Decimal
+    let percentageDifference: Decimal?
+    let changeCount: Int
+
+    init?(priceChanges: [SubscriptionPriceChange]) {
+        let sortedChanges = priceChanges.sorted {
+            $0.changedAt < $1.changedAt
+        }
+
+        guard
+            let firstChange = sortedChanges.first,
+            let lastChange = sortedChanges.last
+        else {
+            return nil
+        }
+
+        originalMonthlyEquivalent =
+            firstChange.previousMonthlyEquivalent
+        currentMonthlyEquivalent =
+            lastChange.newMonthlyEquivalent
+        monthlyEquivalentDifference =
+            currentMonthlyEquivalent -
+            originalMonthlyEquivalent
+        changeCount = sortedChanges.count
+
+        guard originalMonthlyEquivalent != 0 else {
+            percentageDifference = nil
+            return
+        }
+
+        percentageDifference = (
+            monthlyEquivalentDifference /
+            originalMonthlyEquivalent
+        ) * 100
+    }
+}
