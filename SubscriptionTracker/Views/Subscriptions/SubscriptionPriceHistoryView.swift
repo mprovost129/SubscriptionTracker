@@ -23,7 +23,7 @@ struct SubscriptionPriceHistoryView: View {
     var body: some View {
         List {
             if let historySummary {
-                Section("Summary") {
+                Section {
                     summaryRow(
                         title: "Original Monthly",
                         value: currency(
@@ -49,10 +49,13 @@ struct SubscriptionPriceHistoryView: View {
                         title: "Recorded Changes",
                         value: historySummary.changeCount.formatted()
                     )
+                } header: {
+                    Text("Summary")
+                        .foregroundStyle(.primary)
                 }
             }
 
-            Section("Changes") {
+            Section {
                 ForEach(sortedPriceChanges) { change in
                     VStack(alignment: .leading, spacing: 8) {
                         Text(
@@ -111,6 +114,9 @@ struct SubscriptionPriceHistoryView: View {
                     .padding(.vertical, 4)
                     .accessibilityElement(children: .combine)
                 }
+            } header: {
+                Text("Changes")
+                    .foregroundStyle(.primary)
             }
         }
         .navigationTitle("Price History")
@@ -179,7 +185,7 @@ struct SubscriptionPriceHistoryView: View {
     ) -> some View {
         if let percentage = change.percentageDifference {
             Text("(\(signedPercentage(percentage)))")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary)
         }
     }
 
