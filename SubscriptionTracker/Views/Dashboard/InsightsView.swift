@@ -49,6 +49,7 @@ struct InsightsView: View {
                         alignment: .leading,
                         spacing: 28
                     ) {
+                        cancellationAnalysisSection
                         categorySection
                         largestSubscriptionsSection
                     }
@@ -64,6 +65,76 @@ struct InsightsView: View {
                     dismiss()
                 }
             }
+        }
+    }
+
+    private var cancellationAnalysisSection:
+        some View {
+        VStack(
+            alignment: .leading,
+            spacing: 12
+        ) {
+            Text("Cancellation Analysis")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            NavigationLink {
+                CancellationAnalysisView(
+                    subscriptions: subscriptions
+                )
+            } label: {
+                HStack(spacing: 12) {
+                    Image(
+                        systemName:
+                            "chart.line.downtrend.xyaxis"
+                    )
+                    .font(.title2)
+                    .accessibilityHidden(true)
+
+                    VStack(
+                        alignment: .leading,
+                        spacing: 4
+                    ) {
+                        Text("Compare Potential Savings")
+                            .font(.headline)
+
+                        Text(
+                            "Select subscriptions and estimate monthly and yearly savings."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.primary)
+                        .accessibilityHidden(true)
+                }
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: 44,
+                    alignment: .leading
+                )
+                .padding()
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .background(
+                .background,
+                in: RoundedRectangle(
+                    cornerRadius: 16
+                )
+            )
+            .accessibilityElement(
+                children: .combine
+            )
+            .accessibilityLabel(
+                "Compare Potential Savings"
+            )
+            .accessibilityHint(
+                "Opens cancellation analysis"
+            )
         }
     }
 

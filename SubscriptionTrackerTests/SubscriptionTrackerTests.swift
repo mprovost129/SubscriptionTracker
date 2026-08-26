@@ -1311,4 +1311,47 @@ struct SubscriptionTrackerTests {
             Decimal(25)
         )
     }
+
+    @Test
+    func cancellationSavingsWithNoSelections() {
+        let summary = CancellationSavingsCalculator.summary(
+            forMonthlyCosts: []
+        )
+
+        #expect(summary.selectedCount == 0)
+        #expect(summary.monthlySavings == .zero)
+        #expect(summary.yearlySavings == .zero)
+    }
+
+    @Test
+    func cancellationSavingsCombinesSelectedSubscriptions() {
+        let summary = CancellationSavingsCalculator.summary(
+            forMonthlyCosts: [
+                Decimal(string: "9.99")!,
+                Decimal(string: "20.00")!,
+                Decimal(string: "5.50")!
+            ]
+        )
+
+        #expect(summary.selectedCount == 3)
+        #expect(summary.monthlySavings == Decimal(string: "35.49")!)
+        #expect(summary.yearlySavings == Decimal(string: "425.88")!)
+    }
+
+    @Test
+    func cancellationSavingsSupportsYearlyEquivalentCosts() {
+        let yearlySubscriptionMonthlyCost =
+            Decimal(string: "240.00")! / 12
+
+        let summary = CancellationSavingsCalculator.summary(
+            forMonthlyCosts: [
+                yearlySubscriptionMonthlyCost,
+                Decimal(string: "15.99")!
+            ]
+        )
+
+        #expect(summary.selectedCount == 2)
+        #expect(summary.monthlySavings == Decimal(string: "35.99")!)
+        #expect(summary.yearlySavings == Decimal(string: "431.88")!)
+    }
 }
