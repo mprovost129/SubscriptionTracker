@@ -14,64 +14,152 @@ struct SubscriptionPriceHistoryView: View {
         }
     }
 
+    private var historySummary: SubscriptionPriceHistorySummary? {
+        SubscriptionPriceHistorySummary(
+            priceChanges: subscription.priceChanges
+        )
+    }
+
     var body: some View {
-        List(sortedPriceChanges) { change in
-            VStack(alignment: .leading, spacing: 8) {
-                Text(
-                    change.changedAt.formatted(
-                        date: .abbreviated,
-                        time: .shortened
-                    )
-                )
-                .font(.headline)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Previous")
-
-                    Text(
-                        priceDescription(
-                            price: change.previousPrice,
-                            frequency:
-                                change.previousBillingFrequency
+        List {
+            if let historySummary {
+                Section("Summary") {
+                    summaryRow(
+                        title: "Original Monthly",
+                        value: currency(
+                            historySummary.originalMonthlyEquivalent
                         )
                     )
-                    .fontWeight(.semibold)
-                }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("New")
-
-                    Text(
-                        priceDescription(
-                            price: change.newPrice,
-                            frequency:
-                                change.newBillingFrequency
+                    summaryRow(
+                        title: "Current Monthly",
+                        value: currency(
+                            historySummary.currentMonthlyEquivalent
                         )
                     )
-                    .fontWeight(.semibold)
-                }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Monthly Impact")
+                    summaryRow(
+                        title: "Net Monthly Change",
+                        value: summaryDifference(
+                            historySummary
+                        )
+                    )
 
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 6) {
-                            impactAmount(for: change)
-                            impactPercentage(for: change)
-                        }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            impactAmount(for: change)
-                            impactPercentage(for: change)
-                        }
-                    }
+                    summaryRow(
+                        title: "Recorded Changes",
+                        value: historySummary.changeCount.formatted()
+                    )
                 }
             }
-            .padding(.vertical, 4)
-            .accessibilityElement(children: .combine)
+
+            Section("Changes") {
+                ForEach(sortedPriceChanges) { change in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(
+                            change.changedAt.formatted(
+                                date: .abbreviated,
+                                time: .shortened
+                            )
+                        )
+                        .font(.headline)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Previous")
+
+                            Text(
+                                priceDescription(
+                                    price: change.previousPrice,
+                                    frequency:
+                                        change.previousBillingFrequency
+                                )
+                            )
+                            .fontWeight(.semibold)
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("New")
+
+                            Text(
+                                priceDescription(
+                                    price: change.newPrice,
+                                    frequency:
+                                        change.newBillingFrequency
+                                )
+                            )
+                            .fontWeight(.semibold)
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Monthly Impact")
+
+                            ViewThatFits(in: .horizontal) {
+                                HStack(spacing: 6) {
+                                    impactAmount(for: change)
+                                    impactPercentage(for: change)
+                                }
+
+                                VStack(
+                                    alignment: .leading,
+                                    spacing: 2
+                                ) {
+                                    impactAmount(for: change)
+                                    impactPercentage(for: change)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityElement(children: .combine)
+                }
+            }
         }
         .navigationTitle("Price History")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func summaryRow(
+        title: String,
+        value: String
+    ) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+
+                Spacer()
+
+                Text(value)
+                    .fontWeight(.semibold)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+
+                Text(value)
+                    .fontWeight(.semibold)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func summaryDifference(
+        _ summary: SubscriptionPriceHistorySummary
+    ) -> String {
+        let amount = signedCurrency(
+            summary.monthlyEquivalentDifference
+        )
+
+        guard let percentage = summary.percentageDifference else {
+            return amount
+        }
+
+        return "\(amount) (\(signedPercentage(percentage)))"
+    }
+
+    private func currency(_ value: Decimal) -> String {
+        value.formatted(
+            .currency(code: currencyCode)
+        )
     }
 
     private func impactAmount(
