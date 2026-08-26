@@ -53,6 +53,7 @@ struct SubscriptionPriceHistoryView: View {
                     Text("Summary")
                         .foregroundStyle(.primary)
                 }
+                .headerProminence(.increased)
             }
 
             Section {
@@ -118,6 +119,7 @@ struct SubscriptionPriceHistoryView: View {
                 Text("Changes")
                     .foregroundStyle(.primary)
             }
+            .headerProminence(.increased)
         }
         .navigationTitle("Price History")
         .navigationBarTitleDisplayMode(.inline)
