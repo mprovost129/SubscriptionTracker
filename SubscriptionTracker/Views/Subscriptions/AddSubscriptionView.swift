@@ -16,6 +16,7 @@ struct AddSubscriptionView: View {
     @State private var reminderEnabled = true
     @State private var showingSaveError = false
     @State private var saveErrorMessage = ""
+    @State private var isSaving = false
     
     @AppStorage(AppSettings.remindersEnabledByDefaultKey)
     private var remindersEnabledByDefault =
@@ -182,7 +183,12 @@ struct AddSubscriptionView: View {
                             await saveSubscription()
                         }
                     }
-                    .disabled(!canSave)
+                    .disabled(
+                        isSaving ||
+                        name.trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        ).isEmpty
+                    )
                 }
             }
             .alert(
@@ -198,6 +204,11 @@ struct AddSubscriptionView: View {
     }
 
     private func saveSubscription() async {
+        guard !isSaving else { return }
+
+        isSaving = true
+        defer { isSaving = false }
+
         guard let normalizedPrice,
               normalizedPrice > 0 else {
             return
@@ -218,6 +229,7 @@ struct AddSubscriptionView: View {
         do {
             try modelContext.save()
         } catch {
+            modelContext.rollback()
             modelContext.delete(subscription)
 
             saveErrorMessage = error.localizedDescription
