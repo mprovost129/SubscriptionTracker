@@ -32,7 +32,9 @@ enum SubscriptionBillingFilter:
     CaseIterable,
     Identifiable {
     case all = "All Billing"
+    case weekly = "Weekly"
     case monthly = "Monthly"
+    case quarterly = "Quarterly"
     case yearly = "Yearly"
 
     var id: Self {
@@ -90,8 +92,12 @@ enum SubscriptionListOrganizer {
         switch filter {
         case .all:
             return true
+        case .weekly:
+            return subscription.billingFrequency == .weekly
         case .monthly:
             return subscription.billingFrequency == .monthly
+        case .quarterly:
+            return subscription.billingFrequency == .quarterly
         case .yearly:
             return subscription.billingFrequency == .yearly
         }

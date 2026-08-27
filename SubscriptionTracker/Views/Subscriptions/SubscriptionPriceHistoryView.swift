@@ -243,11 +243,6 @@ struct SubscriptionPriceHistoryView: View {
     private func billingDescription(
         for frequency: BillingFrequency
     ) -> String {
-        switch frequency {
-        case .monthly:
-            return "monthly"
-        case .yearly:
-            return "yearly"
-        }
+        frequency.lowercaseDisplayName
     }
 }

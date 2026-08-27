@@ -149,12 +149,7 @@ enum SubscriptionCSVExporter {
     private static func billingText(
         for subscription: Subscription
     ) -> String {
-        switch subscription.billingFrequency {
-        case .monthly:
-            return "Monthly"
-        case .yearly:
-            return "Yearly"
-        }
+        subscription.billingFrequency.displayName
     }
 
     private static func statusText(

@@ -60,12 +60,27 @@ struct RenewalCalculator {
         calendar: Calendar = .current
     ) -> Date? {
         switch billingFrequency {
+        case .weekly:
+            return calendar.date(
+                byAdding: .day,
+                value: 7,
+                to: date
+            )
+
         case .monthly:
-            return nextMonthlyDate(
+            return nextDate(
                 after: date,
+                addingMonths: 1,
                 calendar: calendar
             )
-            
+
+        case .quarterly:
+            return nextDate(
+                after: date,
+                addingMonths: 3,
+                calendar: calendar
+            )
+
         case .yearly:
             return nextYearlyDate(
                 after: date,
@@ -74,62 +89,42 @@ struct RenewalCalculator {
         }
     }
     
-    private static func nextMonthlyDate(
+    private static func nextDate(
         after date: Date,
+        addingMonths monthCount: Int,
         calendar: Calendar
     ) -> Date? {
-        let originalComponents = calendar.dateComponents(
-            [.year, .month, .day],
+        let originalDay = calendar.component(
+            .day,
             from: date
         )
-        
+
         guard
-            let originalYear = originalComponents.year,
-            let originalMonth = originalComponents.month,
-            let originalDay = originalComponents.day
-        else {
-            return nil
-        }
-        
-        var targetYear = originalYear
-        var targetMonth = originalMonth + 1
-        
-        if targetMonth > 12 {
-            targetMonth = 1
-            targetYear += 1
-        }
-        
-        var firstOfTargetMonth = DateComponents()
-        firstOfTargetMonth.year = targetYear
-        firstOfTargetMonth.month = targetMonth
-        firstOfTargetMonth.day = 1
-        
-        guard
-            let targetMonthDate = calendar.date(
-                from: firstOfTargetMonth
+            let targetMonth = calendar.date(
+                byAdding: .month,
+                value: monthCount,
+                to: date
             ),
             let dayRange = calendar.range(
                 of: .day,
                 in: .month,
-                for: targetMonthDate
+                for: targetMonth
             )
         else {
             return nil
         }
-        
-        let targetDay = min(
+
+        var components = calendar.dateComponents(
+            [.year, .month, .hour, .minute, .second],
+            from: targetMonth
+        )
+
+        components.day = min(
             originalDay,
             dayRange.count
         )
-        
-        var resultComponents = DateComponents()
-        resultComponents.year = targetYear
-        resultComponents.month = targetMonth
-        resultComponents.day = targetDay
-        
-        return calendar.date(
-            from: resultComponents
-        )
+
+        return calendar.date(from: components)
     }
     
     private static func nextYearlyDate(

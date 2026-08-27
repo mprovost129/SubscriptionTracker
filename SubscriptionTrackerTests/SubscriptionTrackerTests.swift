@@ -45,6 +45,44 @@ struct SubscriptionTrackerTests {
     }
 
     @Test
+    func weeklyBillingCalculatesNormalizedCosts() {
+        let price = Decimal(3)
+
+        #expect(
+            SubscriptionCalculator.annualEquivalent(
+                price: price,
+                billingFrequency: .weekly
+            ) == Decimal(156)
+        )
+
+        #expect(
+            SubscriptionCalculator.monthlyEquivalent(
+                price: price,
+                billingFrequency: .weekly
+            ) == Decimal(13)
+        )
+    }
+
+    @Test
+    func quarterlyBillingCalculatesNormalizedCosts() {
+        let price = Decimal(30)
+
+        #expect(
+            SubscriptionCalculator.annualEquivalent(
+                price: price,
+                billingFrequency: .quarterly
+            ) == Decimal(120)
+        )
+
+        #expect(
+            SubscriptionCalculator.monthlyEquivalent(
+                price: price,
+                billingFrequency: .quarterly
+            ) == Decimal(10)
+        )
+    }
+
+    @Test
     func supportedReminderDaysArePreserved() {
         for days in AppSettings.supportedReminderDays {
             let result =
@@ -406,6 +444,65 @@ struct SubscriptionTrackerTests {
         #expect(components.year == 2027)
         #expect(components.month == 8)
         #expect(components.day == 13)
+    }
+
+    @Test
+    func weeklyRenewalAdvancesSevenDays() throws {
+        let calendar = Calendar.current
+        let start = try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2027,
+                    month: 1,
+                    day: 1
+                )
+            )
+        )
+
+        let result = RenewalCalculator.nextRenewalDate(
+            after: start,
+            billingFrequency: .weekly,
+            calendar: calendar
+        )
+
+        let expected = calendar.date(
+            byAdding: .day,
+            value: 7,
+            to: start
+        )
+
+        #expect(result == expected)
+    }
+
+    @Test
+    func quarterlyRenewalPreservesMonthEnd() throws {
+        let calendar = Calendar.current
+        let start = try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2027,
+                    month: 1,
+                    day: 31
+                )
+            )
+        )
+
+        let result = try #require(
+            RenewalCalculator.nextRenewalDate(
+                after: start,
+                billingFrequency: .quarterly,
+                calendar: calendar
+            )
+        )
+
+        let components = calendar.dateComponents(
+            [.year, .month, .day],
+            from: result
+        )
+
+        #expect(components.year == 2027)
+        #expect(components.month == 4)
+        #expect(components.day == 30)
     }
     
     @Test

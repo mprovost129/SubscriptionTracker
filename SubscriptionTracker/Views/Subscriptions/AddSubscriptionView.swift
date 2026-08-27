@@ -4,8 +4,6 @@ import SwiftData
 struct AddSubscriptionView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.dynamicTypeSize)
-    private var dynamicTypeSize
 
     @State private var name = ""
     @State private var price = ""
@@ -70,11 +68,13 @@ struct AddSubscriptionView: View {
             "Billing",
             selection: $billingFrequency
         ) {
-            Text("Monthly")
-                .tag(BillingFrequency.monthly)
-
-            Text("Yearly")
-                .tag(BillingFrequency.yearly)
+            ForEach(
+                BillingFrequency.allCases,
+                id: \.self
+            ) { frequency in
+                Text(frequency.displayName)
+                    .tag(frequency)
+            }
         }
     }
 
@@ -101,12 +101,7 @@ struct AddSubscriptionView: View {
                             .accessibilityLabel("Price")
                     }
 
-                    if dynamicTypeSize.isAccessibilitySize {
-                        billingPicker
-                    } else {
-                        billingPicker
-                            .pickerStyle(.segmented)
-                    }
+                    billingPicker
                     
                     DatePicker(
                         "Next Renewal Date",

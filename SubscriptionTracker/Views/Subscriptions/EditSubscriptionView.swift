@@ -5,8 +5,6 @@ struct EditSubscriptionView: View {
     
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dynamicTypeSize)
-    private var dynamicTypeSize
     
     let subscription: Subscription
 
@@ -90,11 +88,13 @@ struct EditSubscriptionView: View {
             "Billing",
             selection: $billingFrequency
         ) {
-            Text("Monthly")
-                .tag(BillingFrequency.monthly)
-
-            Text("Yearly")
-                .tag(BillingFrequency.yearly)
+            ForEach(
+                BillingFrequency.allCases,
+                id: \.self
+            ) { frequency in
+                Text(frequency.displayName)
+                    .tag(frequency)
+            }
         }
     }
     
@@ -121,12 +121,7 @@ struct EditSubscriptionView: View {
                             .accessibilityLabel("Price")
                     }
                     
-                    if dynamicTypeSize.isAccessibilitySize {
-                        billingPicker
-                    } else {
-                        billingPicker
-                            .pickerStyle(.segmented)
-                    }
+                    billingPicker
 
                     DatePicker(
                         "Next Renewal Date",

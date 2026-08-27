@@ -2,8 +2,27 @@ import Foundation
 import SwiftData
 
 enum BillingFrequency: String, Codable, CaseIterable {
+    case weekly
     case monthly
+    case quarterly
     case yearly
+
+    var displayName: String {
+        switch self {
+        case .weekly:
+            return "Weekly"
+        case .monthly:
+            return "Monthly"
+        case .quarterly:
+            return "Quarterly"
+        case .yearly:
+            return "Yearly"
+        }
+    }
+
+    var lowercaseDisplayName: String {
+        displayName.lowercased()
+    }
 }
 
 enum SubscriptionStatus: String, Codable, CaseIterable {

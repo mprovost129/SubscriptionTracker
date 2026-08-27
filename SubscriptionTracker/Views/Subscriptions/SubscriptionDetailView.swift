@@ -33,12 +33,7 @@ struct SubscriptionDetailView: View {
     }
 
     private var billingLabel: String {
-        switch subscription.billingFrequency {
-        case .monthly:
-            return "Monthly"
-        case .yearly:
-            return "Yearly"
-        }
+        subscription.billingFrequency.displayName
     }
     
     private var reminderStatusText: String {
