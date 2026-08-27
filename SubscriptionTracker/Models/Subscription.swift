@@ -21,6 +21,52 @@ enum SubscriptionCategory: String, CaseIterable, Codable {
     case productivity = "Productivity"
     case business = "Business"
     case other = "Other"
+
+    static let customSelectionValue = "__custom__"
+
+    static func resolvedValue(
+        selection: String,
+        customValue: String
+    ) -> String? {
+        if selection == customSelectionValue {
+            let trimmedValue = customValue.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+            return trimmedValue.isEmpty
+                ? nil
+                : trimmedValue
+        }
+
+        guard allCases.contains(
+            where: { $0.rawValue == selection }
+        ) else {
+            return nil
+        }
+
+        return selection
+    }
+
+    static func selectionValues(
+        for storedValue: String
+    ) -> (
+        selection: String,
+        customValue: String
+    ) {
+        if allCases.contains(
+            where: { $0.rawValue == storedValue }
+        ) {
+            return (
+                selection: storedValue,
+                customValue: ""
+            )
+        }
+
+        return (
+            selection: customSelectionValue,
+            customValue: storedValue
+        )
+    }
 }
 
 @Model

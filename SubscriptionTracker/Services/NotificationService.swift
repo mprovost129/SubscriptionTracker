@@ -25,13 +25,15 @@ struct NotificationService {
             forKey: AppSettings.reminderDaysBeforeKey
         ) as? Int
 
-        let reminderDaysBeforeRenewal: Int =
-            storedReminderDays ?? AppSettings.defaultReminderDaysBefore
+        let reminderDaysBeforeRenewal =
+            AppSettings.normalizedReminderDays(
+                storedReminderDays
+            )
         
         // Remove any previously scheduled reminder for this subscription.
         removeRenewalReminder(for: subscription)
 
-        // Find the calendar day three days before renewal.
+        // Find the configured reminder day before renewal.
         guard let reminderDay = calendar.date(
             byAdding: .day,
             value: -reminderDaysBeforeRenewal,

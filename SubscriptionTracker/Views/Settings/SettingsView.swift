@@ -52,14 +52,17 @@ struct SettingsView: View {
             "Remind me",
             selection: $reminderDaysBefore
         ) {
-            Text("1 day before")
-                .tag(1)
-
-            Text("3 days before")
-                .tag(3)
-
-            Text("7 days before")
-                .tag(7)
+            ForEach(
+                AppSettings.supportedReminderDays,
+                id: \.self
+            ) { days in
+                Text(
+                    AppSettings.reminderTimingText(
+                        for: days
+                    )
+                )
+                .tag(days)
+            }
         }
     }
     
@@ -187,6 +190,12 @@ struct SettingsView: View {
         }
         .task {
             await refreshNotificationStatus()
+        }
+        .onAppear {
+            reminderDaysBefore =
+                AppSettings.normalizedReminderDays(
+                    reminderDaysBefore
+                )
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {

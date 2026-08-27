@@ -43,6 +43,110 @@ struct SubscriptionTrackerTests {
         
         #expect(result == Decimal(120))
     }
+
+    @Test
+    func supportedReminderDaysArePreserved() {
+        for days in AppSettings.supportedReminderDays {
+            let result =
+                AppSettings.normalizedReminderDays(days)
+
+            #expect(result == days)
+        }
+    }
+
+    @Test
+    func missingReminderDaysUseDefault() {
+        let result =
+            AppSettings.normalizedReminderDays(nil)
+
+        #expect(
+            result ==
+            AppSettings.defaultReminderDaysBefore
+        )
+    }
+
+    @Test
+    func unsupportedReminderDaysUseDefault() {
+        let result =
+            AppSettings.normalizedReminderDays(21)
+
+        #expect(
+            result ==
+            AppSettings.defaultReminderDaysBefore
+        )
+    }
+
+    @Test
+    func reminderTimingTextUsesCorrectGrammar() {
+        #expect(
+            AppSettings.reminderTimingText(for: 1) ==
+            "1 day before"
+        )
+
+        #expect(
+            AppSettings.reminderTimingText(for: 14) ==
+            "14 days before"
+        )
+    }
+
+    @Test
+    func standardSubscriptionCategoryIsResolved() {
+        let result = SubscriptionCategory.resolvedValue(
+            selection: SubscriptionCategory.fitness.rawValue,
+            customValue: ""
+        )
+
+        #expect(result == "Fitness")
+    }
+
+    @Test
+    func customSubscriptionCategoryIsTrimmed() {
+        let result = SubscriptionCategory.resolvedValue(
+            selection: SubscriptionCategory.customSelectionValue,
+            customValue: "  Utilities  "
+        )
+
+        #expect(result == "Utilities")
+    }
+
+    @Test
+    func emptyCustomSubscriptionCategoryIsRejected() {
+        let result = SubscriptionCategory.resolvedValue(
+            selection: SubscriptionCategory.customSelectionValue,
+            customValue: "   "
+        )
+
+        #expect(result == nil)
+    }
+
+    @Test
+    func existingCustomCategoryIsPreservedForEditing() {
+        let result = SubscriptionCategory.selectionValues(
+            for: "Professional Memberships"
+        )
+
+        #expect(
+            result.selection ==
+            SubscriptionCategory.customSelectionValue
+        )
+        #expect(
+            result.customValue ==
+            "Professional Memberships"
+        )
+    }
+
+    @Test
+    func existingStandardCategoryRemainsStandard() {
+        let result = SubscriptionCategory.selectionValues(
+            for: SubscriptionCategory.software.rawValue
+        )
+
+        #expect(
+            result.selection ==
+            SubscriptionCategory.software.rawValue
+        )
+        #expect(result.customValue.isEmpty)
+    }
     
     @Test
     func cancellationSavingsUsesNormalizedValues() {

@@ -14,7 +14,8 @@ struct EditSubscriptionView: View {
     @State private var price: String
     @State private var billingFrequency: BillingFrequency
     @State private var nextBillingDate: Date
-    @State private var category: SubscriptionCategory
+    @State private var categorySelection: String
+    @State private var customCategory: String
     @State private var notes: String
     @State private var reminderEnabled: Bool
     @State private var showingSaveError = false
@@ -36,10 +37,16 @@ struct EditSubscriptionView: View {
         _price = State(initialValue: subscription.price.description)
         _billingFrequency = State(initialValue: subscription.billingFrequency)
         _nextBillingDate = State(initialValue: subscription.nextBillingDate)
-        _category = State(
-            initialValue:
-                SubscriptionCategory(rawValue: subscription.category)
-                ?? .other
+        let categoryValues =
+            SubscriptionCategory.selectionValues(
+                for: subscription.category
+            )
+
+        _categorySelection = State(
+            initialValue: categoryValues.selection
+        )
+        _customCategory = State(
+            initialValue: categoryValues.customValue
         )
         _notes = State(initialValue: subscription.notes)
         _reminderEnabled = State(initialValue: subscription.reminderEnabled)
@@ -56,13 +63,21 @@ struct EditSubscriptionView: View {
         )
     }
 
+    private var resolvedCategory: String? {
+        SubscriptionCategory.resolvedValue(
+            selection: categorySelection,
+            customValue: customCategory
+        )
+    }
+
     private var canSave: Bool {
         guard
             !name.trimmingCharacters(
                 in: .whitespacesAndNewlines
             ).isEmpty,
             let normalizedPrice,
-            normalizedPrice > 0
+            normalizedPrice > 0,
+            resolvedCategory != nil
         else {
             return false
         }
@@ -139,10 +154,45 @@ struct EditSubscriptionView: View {
                 .headerProminence(.increased)
 
                 Section {
-                    Picker("Category", selection: $category) {
-                        ForEach(SubscriptionCategory.allCases, id: \.self) { category in
+                    Picker(
+                        "Category",
+                        selection: $categorySelection
+                    ) {
+                        ForEach(
+                            SubscriptionCategory.allCases,
+                            id: \.self
+                        ) { category in
                             Text(category.rawValue)
-                                .tag(category)
+                                .tag(category.rawValue)
+                        }
+
+                        Text("Custom")
+                            .tag(
+                                SubscriptionCategory.customSelectionValue
+                            )
+                    }
+
+                    if categorySelection ==
+                        SubscriptionCategory.customSelectionValue {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Custom Category")
+                                .font(.caption)
+                                .foregroundStyle(.primary)
+
+                            TextField(
+                                "",
+                                text: $customCategory
+                            )
+                            .textInputAutocapitalization(.words)
+                            .accessibilityLabel("Custom Category")
+
+                            if customCategory.trimmingCharacters(
+                                in: .whitespacesAndNewlines
+                            ).isEmpty {
+                                Text("Enter a category name.")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
                         }
                     }
 
@@ -167,7 +217,7 @@ struct EditSubscriptionView: View {
 
                     if reminderEnabled {
                         Text(
-                            "Reminder will be sent \(reminderDaysBefore) days before renewal."
+                            "Reminder will be sent \(AppSettings.reminderTimingText(for: reminderDaysBefore)) renewal."
                         )
                         .font(.caption)
                         .foregroundStyle(.primary)
@@ -193,12 +243,7 @@ struct EditSubscriptionView: View {
                             await saveChanges()
                         }
                     }
-                    .disabled(
-                        isSaving ||
-                        name.trimmingCharacters(
-                            in: .whitespacesAndNewlines
-                        ).isEmpty
-                    )
+                    .disabled(isSaving || !canSave)
                 }
             }
             .alert(
@@ -220,7 +265,8 @@ struct EditSubscriptionView: View {
         defer { isSaving = false }
 
         guard let normalizedPrice,
-              normalizedPrice > 0 else {
+              normalizedPrice > 0,
+              let resolvedCategory else {
             return
         }
 
@@ -239,7 +285,7 @@ struct EditSubscriptionView: View {
         subscription.price = normalizedPrice
         subscription.billingFrequency = billingFrequency
         subscription.nextBillingDate = nextBillingDate
-        subscription.category = category.rawValue
+        subscription.category = resolvedCategory
         subscription.notes = notes
         subscription.reminderEnabled = reminderEnabled
         subscription.updatedAt = changedAt
