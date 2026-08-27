@@ -19,6 +19,7 @@ struct EditSubscriptionView: View {
     @State private var reminderEnabled: Bool
     @State private var showingSaveError = false
     @State private var saveErrorMessage = ""
+    @State private var isSaving = false
     
     @AppStorage(AppSettings.reminderDaysBeforeKey)
     private var reminderDaysBefore =
@@ -192,7 +193,12 @@ struct EditSubscriptionView: View {
                             await saveChanges()
                         }
                     }
-                    .disabled(!canSave)
+                    .disabled(
+                        isSaving ||
+                        name.trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        ).isEmpty
+                    )
                 }
             }
             .alert(
@@ -208,6 +214,11 @@ struct EditSubscriptionView: View {
     }
 
     private func saveChanges() async {
+        guard !isSaving else { return }
+
+        isSaving = true
+        defer { isSaving = false }
+
         guard let normalizedPrice,
               normalizedPrice > 0 else {
             return
@@ -236,6 +247,7 @@ struct EditSubscriptionView: View {
         do {
             try modelContext.save()
         } catch {
+            modelContext.rollback()
             saveErrorMessage = error.localizedDescription
             showingSaveError = true
             return
