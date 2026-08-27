@@ -625,6 +625,58 @@ struct SubscriptionTrackerTests {
             )
         )
     }
+
+    @Test
+    func csvExportNeutralizesFormulaInjectionPrefixes() {
+        let unsafeValues = [
+            "=2+2",
+            "+SUM(A1:A2)",
+            "-10+20",
+            "@SUM(A1:A2)",
+            "   =2+2"
+        ]
+
+        for unsafeValue in unsafeValues {
+            let subscription = Subscription(
+                name: unsafeValue,
+                price: Decimal(10),
+                billingFrequency: .monthly,
+                nextBillingDate: Date()
+            )
+
+            let csv = SubscriptionCSVExporter.csvString(
+                for: [subscription],
+                currencyCode: "USD"
+            )
+
+            #expect(
+                csv.contains(
+                    "\"'\(unsafeValue)\""
+                )
+            )
+        }
+    }
+
+    @Test
+    func csvExportDoesNotModifySafeTextFields() {
+        let subscription = Subscription(
+            name: "Normal Service",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            notes: "Shared family plan"
+        )
+
+        let csv = SubscriptionCSVExporter.csvString(
+            for: [subscription],
+            currencyCode: "USD"
+        )
+
+        #expect(csv.contains("\"Normal Service\""))
+        #expect(csv.contains("\"Shared family plan\""))
+        #expect(!csv.contains("\"'Normal Service\""))
+        #expect(!csv.contains("\"'Shared family plan\""))
+    }
     
     @Test
     func csvExportIncludesCanceledSubscriptionDetails() {

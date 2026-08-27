@@ -118,7 +118,27 @@ enum SubscriptionCSVExporter {
     private static func csvField(
         _ value: String
     ) -> String {
-        let escapedValue = value.replacingOccurrences(
+        let firstVisibleCharacter = value
+            .drop(while: { $0.isWhitespace })
+            .first
+
+        let formulaPrefixes: Set<Character> = [
+            "=",
+            "+",
+            "-",
+            "@"
+        ]
+
+        let safeValue: String
+
+        if let firstVisibleCharacter,
+           formulaPrefixes.contains(firstVisibleCharacter) {
+            safeValue = "'" + value
+        } else {
+            safeValue = value
+        }
+
+        let escapedValue = safeValue.replacingOccurrences(
             of: "\"",
             with: "\"\""
         )
@@ -188,4 +208,3 @@ private enum CSVExportError: LocalizedError {
         }
     }
 }
-
