@@ -11,6 +11,7 @@ enum AppSettings {
     static let defaultReminderDaysBefore = 3
 
     static let supportedReminderDays = [
+        0,
         1,
         3,
         7,
@@ -32,8 +33,13 @@ enum AppSettings {
     static func reminderTimingText(
         for days: Int
     ) -> String {
-        days == 1
-            ? "1 day before"
-            : "\(days) days before"
+        switch normalizedReminderDays(days) {
+        case 0:
+            return "On renewal day"
+        case 1:
+            return "1 day before"
+        default:
+            return "\(days) days before"
+        }
     }
 }

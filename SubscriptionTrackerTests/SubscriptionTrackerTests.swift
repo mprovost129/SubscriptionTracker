@@ -117,6 +117,11 @@ struct SubscriptionTrackerTests {
     @Test
     func reminderTimingTextUsesCorrectGrammar() {
         #expect(
+            AppSettings.reminderTimingText(for: 0) ==
+            "On renewal day"
+        )
+
+        #expect(
             AppSettings.reminderTimingText(for: 1) ==
             "1 day before"
         )
@@ -125,6 +130,114 @@ struct SubscriptionTrackerTests {
             AppSettings.reminderTimingText(for: 14) ==
             "14 days before"
         )
+    }
+
+    @Test
+    func subscriptionUsesDefaultReminderTiming() {
+        let subscription = Subscription(
+            name: "Test",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        #expect(
+            subscription.reminderDaysBefore ==
+            AppSettings.defaultReminderDaysBefore
+        )
+    }
+
+    @Test
+    func subscriptionStoresCustomReminderTiming() {
+        let subscription = Subscription(
+            name: "Test",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            reminderDaysBefore: 14
+        )
+
+        #expect(subscription.reminderDaysBefore == 14)
+    }
+
+    @Test
+    func unsupportedSubscriptionReminderTimingIsNormalized() {
+        let subscription = Subscription(
+            name: "Test",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            reminderDaysBefore: 21
+        )
+
+        #expect(
+            subscription.reminderDaysBefore ==
+            AppSettings.defaultReminderDaysBefore
+        )
+    }
+
+    @Test
+    func reminderDeliveryDateUsesSubscriptionLeadTime() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let renewalDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 20,
+                hour: 14
+            )
+        )!
+
+        let result = NotificationService.reminderDeliveryDate(
+            for: renewalDate,
+            daysBefore: 3,
+            calendar: calendar
+        )
+
+        let expected = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 17,
+                hour: 9
+            )
+        )
+
+        #expect(result == expected)
+    }
+
+    @Test
+    func sameDayReminderUsesRenewalDayAtNineAM() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let renewalDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 20,
+                hour: 14
+            )
+        )!
+
+        let result = NotificationService.reminderDeliveryDate(
+            for: renewalDate,
+            daysBefore: 0,
+            calendar: calendar
+        )
+
+        let expected = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 20,
+                hour: 9
+            )
+        )
+
+        #expect(result == expected)
     }
 
     @Test

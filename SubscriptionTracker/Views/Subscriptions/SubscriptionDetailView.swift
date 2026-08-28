@@ -41,7 +41,13 @@ struct SubscriptionDetailView: View {
             return "Off (Canceled)"
         }
 
-        return subscription.reminderEnabled ? "On" : "Off"
+        guard subscription.reminderEnabled else {
+            return "Off"
+        }
+
+        return AppSettings.reminderTimingText(
+            for: subscription.reminderDaysBefore
+        )
     }
     
     private var renewalDateAfterMarkingRenewed: Date? {

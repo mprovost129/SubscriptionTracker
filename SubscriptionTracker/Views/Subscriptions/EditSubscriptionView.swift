@@ -16,13 +16,10 @@ struct EditSubscriptionView: View {
     @State private var customCategory: String
     @State private var notes: String
     @State private var reminderEnabled: Bool
+    @State private var reminderDaysBefore: Int
     @State private var showingSaveError = false
     @State private var saveErrorMessage = ""
     @State private var isSaving = false
-    
-    @AppStorage(AppSettings.reminderDaysBeforeKey)
-    private var reminderDaysBefore =
-        AppSettings.defaultReminderDaysBefore
     
     @AppStorage(AppSettings.currencyCodeKey)
     private var currencyCode =
@@ -48,6 +45,12 @@ struct EditSubscriptionView: View {
         )
         _notes = State(initialValue: subscription.notes)
         _reminderEnabled = State(initialValue: subscription.reminderEnabled)
+        _reminderDaysBefore = State(
+            initialValue:
+                AppSettings.normalizedReminderDays(
+                    subscription.reminderDaysBefore
+                )
+        )
     }
 
     private var normalizedPrice: Decimal? {
@@ -94,6 +97,25 @@ struct EditSubscriptionView: View {
             ) { frequency in
                 Text(frequency.displayName)
                     .tag(frequency)
+            }
+        }
+    }
+
+    private var reminderTimingPicker: some View {
+        Picker(
+            "Reminder Timing",
+            selection: $reminderDaysBefore
+        ) {
+            ForEach(
+                AppSettings.supportedReminderDays,
+                id: \.self
+            ) { days in
+                Text(
+                    AppSettings.reminderTimingText(
+                        for: days
+                    )
+                )
+                .tag(days)
             }
         }
     }
@@ -211,8 +233,10 @@ struct EditSubscriptionView: View {
                     )
 
                     if reminderEnabled {
+                        reminderTimingPicker
+
                         Text(
-                            "Reminder will be sent \(AppSettings.reminderTimingText(for: reminderDaysBefore)) renewal."
+                            "Reminder timing: \(AppSettings.reminderTimingText(for: reminderDaysBefore))."
                         )
                         .font(.caption)
                         .foregroundStyle(.primary)
@@ -283,6 +307,10 @@ struct EditSubscriptionView: View {
         subscription.category = resolvedCategory
         subscription.notes = notes
         subscription.reminderEnabled = reminderEnabled
+        subscription.reminderDaysBefore =
+            AppSettings.normalizedReminderDays(
+                reminderDaysBefore
+            )
         subscription.updatedAt = changedAt
         
         do {

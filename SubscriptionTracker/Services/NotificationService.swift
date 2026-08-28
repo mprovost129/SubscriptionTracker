@@ -21,43 +21,22 @@ struct NotificationService {
             return
         }
         
-        let storedReminderDays = UserDefaults.standard.object(
-            forKey: AppSettings.reminderDaysBeforeKey
-        ) as? Int
-
-        let reminderDaysBeforeRenewal =
-            AppSettings.normalizedReminderDays(
-                storedReminderDays
-            )
-        
         // Remove any previously scheduled reminder for this subscription.
         removeRenewalReminder(for: subscription)
 
-        // Find the configured reminder day before renewal.
-        guard let reminderDay = calendar.date(
-            byAdding: .day,
-            value: -reminderDaysBeforeRenewal,
-            to: subscription.nextBillingDate
-        ) else {
-            return
-        }
-
-        // Schedule the notification for 9:00 AM on that day.
-        var reminderComponents = calendar.dateComponents(
-            [.year, .month, .day],
-            from: reminderDay
-        )
-
-        reminderComponents.hour = 9
-        reminderComponents.minute = 0
-
-        // Don't schedule a reminder whose delivery time has already passed.
-        guard let actualReminderDate = calendar.date(
-            from: reminderComponents
+        guard let actualReminderDate = reminderDeliveryDate(
+            for: subscription.nextBillingDate,
+            daysBefore: subscription.reminderDaysBefore,
+            calendar: calendar
         ),
         actualReminderDate > Date() else {
             return
         }
+
+        let reminderComponents = calendar.dateComponents(
+            [.year, .month, .day, .hour, .minute],
+            from: actualReminderDate
+        )
 
         let content = UNMutableNotificationContent()
         content.title = "\(subscription.name) renews soon"
@@ -76,6 +55,35 @@ struct NotificationService {
         )
         
         try await UNUserNotificationCenter.current().add(request)
+    }
+
+    static func reminderDeliveryDate(
+        for renewalDate: Date,
+        daysBefore: Int,
+        calendar: Calendar = .current
+    ) -> Date? {
+        let normalizedDays =
+            AppSettings.normalizedReminderDays(
+                daysBefore
+            )
+
+        guard let reminderDay = calendar.date(
+            byAdding: .day,
+            value: -normalizedDays,
+            to: renewalDate
+        ) else {
+            return nil
+        }
+
+        var components = calendar.dateComponents(
+            [.year, .month, .day],
+            from: reminderDay
+        )
+
+        components.hour = 9
+        components.minute = 0
+
+        return calendar.date(from: components)
     }
     
     static func removeRenewalReminder(

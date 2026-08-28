@@ -14,6 +14,8 @@ struct AddSubscriptionView: View {
     @State private var customCategory = ""
     @State private var notes = ""
     @State private var reminderEnabled = true
+    @State private var reminderDaysBefore =
+        AppSettings.defaultReminderDaysBefore
     @State private var showingSaveError = false
     @State private var saveErrorMessage = ""
     @State private var isSaving = false
@@ -23,7 +25,7 @@ struct AddSubscriptionView: View {
         AppSettings.defaultRemindersEnabled
 
     @AppStorage(AppSettings.reminderDaysBeforeKey)
-    private var reminderDaysBefore =
+    private var defaultReminderDaysBefore =
         AppSettings.defaultReminderDaysBefore
 
     @AppStorage(AppSettings.currencyCodeKey)
@@ -74,6 +76,25 @@ struct AddSubscriptionView: View {
             ) { frequency in
                 Text(frequency.displayName)
                     .tag(frequency)
+            }
+        }
+    }
+
+    private var reminderTimingPicker: some View {
+        Picker(
+            "Reminder Timing",
+            selection: $reminderDaysBefore
+        ) {
+            ForEach(
+                AppSettings.supportedReminderDays,
+                id: \.self
+            ) { days in
+                Text(
+                    AppSettings.reminderTimingText(
+                        for: days
+                    )
+                )
+                .tag(days)
             }
         }
     }
@@ -191,8 +212,10 @@ struct AddSubscriptionView: View {
                     )
                     
                     if reminderEnabled {
+                        reminderTimingPicker
+
                         Text(
-                            "Reminder will be sent \(AppSettings.reminderTimingText(for: reminderDaysBefore)) renewal."
+                            "Reminder timing: \(AppSettings.reminderTimingText(for: reminderDaysBefore))."
                         )
                         .font(.caption)
                         .foregroundStyle(.primary)
@@ -207,6 +230,10 @@ struct AddSubscriptionView: View {
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 reminderEnabled = remindersEnabledByDefault
+                reminderDaysBefore =
+                    AppSettings.normalizedReminderDays(
+                        defaultReminderDaysBefore
+                    )
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -255,7 +282,8 @@ struct AddSubscriptionView: View {
             nextBillingDate: nextBillingDate,
             category: resolvedCategory,
             notes: notes,
-            reminderEnabled: reminderEnabled
+            reminderEnabled: reminderEnabled,
+            reminderDaysBefore: reminderDaysBefore
         )
 
         modelContext.insert(subscription)

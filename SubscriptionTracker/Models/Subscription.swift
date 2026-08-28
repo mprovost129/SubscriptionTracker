@@ -99,6 +99,7 @@ final class Subscription {
     var category: String
     var notes: String
     var reminderEnabled: Bool
+    var reminderDaysBefore: Int = 3
     var status: SubscriptionStatus
     var cancellationDate: Date?
     var createdAt: Date
@@ -117,6 +118,7 @@ final class Subscription {
         category: String = SubscriptionCategory.other.rawValue,
         notes: String = "",
         reminderEnabled: Bool = true,
+        reminderDaysBefore: Int = AppSettings.defaultReminderDaysBefore,
         status: SubscriptionStatus = .active,
         cancellationDate: Date? = nil
     ) {
@@ -127,6 +129,10 @@ final class Subscription {
         self.category = category
         self.notes = notes
         self.reminderEnabled = reminderEnabled
+        self.reminderDaysBefore =
+            AppSettings.normalizedReminderDays(
+                reminderDaysBefore
+            )
         self.status = status
         self.cancellationDate = cancellationDate
         self.createdAt = Date()
