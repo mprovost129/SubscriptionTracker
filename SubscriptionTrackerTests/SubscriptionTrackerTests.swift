@@ -43,6 +43,261 @@ struct SubscriptionTrackerTests {
         
         #expect(result == Decimal(120))
     }
+
+    @Test
+    func weeklyBillingCalculatesNormalizedCosts() {
+        let price = Decimal(3)
+
+        #expect(
+            SubscriptionCalculator.annualEquivalent(
+                price: price,
+                billingFrequency: .weekly
+            ) == Decimal(156)
+        )
+
+        #expect(
+            SubscriptionCalculator.monthlyEquivalent(
+                price: price,
+                billingFrequency: .weekly
+            ) == Decimal(13)
+        )
+    }
+
+    @Test
+    func quarterlyBillingCalculatesNormalizedCosts() {
+        let price = Decimal(30)
+
+        #expect(
+            SubscriptionCalculator.annualEquivalent(
+                price: price,
+                billingFrequency: .quarterly
+            ) == Decimal(120)
+        )
+
+        #expect(
+            SubscriptionCalculator.monthlyEquivalent(
+                price: price,
+                billingFrequency: .quarterly
+            ) == Decimal(10)
+        )
+    }
+
+    @Test
+    func supportedReminderDaysArePreserved() {
+        for days in AppSettings.supportedReminderDays {
+            let result =
+                AppSettings.normalizedReminderDays(days)
+
+            #expect(result == days)
+        }
+    }
+
+    @Test
+    func missingReminderDaysUseDefault() {
+        let result =
+            AppSettings.normalizedReminderDays(nil)
+
+        #expect(
+            result ==
+            AppSettings.defaultReminderDaysBefore
+        )
+    }
+
+    @Test
+    func unsupportedReminderDaysUseDefault() {
+        let result =
+            AppSettings.normalizedReminderDays(21)
+
+        #expect(
+            result ==
+            AppSettings.defaultReminderDaysBefore
+        )
+    }
+
+    @Test
+    func reminderTimingTextUsesCorrectGrammar() {
+        #expect(
+            AppSettings.reminderTimingText(for: 0) ==
+            "On renewal day"
+        )
+
+        #expect(
+            AppSettings.reminderTimingText(for: 1) ==
+            "1 day before"
+        )
+
+        #expect(
+            AppSettings.reminderTimingText(for: 14) ==
+            "14 days before"
+        )
+    }
+
+    @Test
+    func subscriptionUsesDefaultReminderTiming() {
+        let subscription = Subscription(
+            name: "Test",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        #expect(
+            subscription.reminderDaysBefore ==
+            AppSettings.defaultReminderDaysBefore
+        )
+    }
+
+    @Test
+    func subscriptionStoresCustomReminderTiming() {
+        let subscription = Subscription(
+            name: "Test",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            reminderDaysBefore: 14
+        )
+
+        #expect(subscription.reminderDaysBefore == 14)
+    }
+
+    @Test
+    func unsupportedSubscriptionReminderTimingIsNormalized() {
+        let subscription = Subscription(
+            name: "Test",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            reminderDaysBefore: 21
+        )
+
+        #expect(
+            subscription.reminderDaysBefore ==
+            AppSettings.defaultReminderDaysBefore
+        )
+    }
+
+    @Test
+    func reminderDeliveryDateUsesSubscriptionLeadTime() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let renewalDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 20,
+                hour: 14
+            )
+        )!
+
+        let result = NotificationService.reminderDeliveryDate(
+            for: renewalDate,
+            daysBefore: 3,
+            calendar: calendar
+        )
+
+        let expected = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 17,
+                hour: 9
+            )
+        )
+
+        #expect(result == expected)
+    }
+
+    @Test
+    func sameDayReminderUsesRenewalDayAtNineAM() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let renewalDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 20,
+                hour: 14
+            )
+        )!
+
+        let result = NotificationService.reminderDeliveryDate(
+            for: renewalDate,
+            daysBefore: 0,
+            calendar: calendar
+        )
+
+        let expected = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 20,
+                hour: 9
+            )
+        )
+
+        #expect(result == expected)
+    }
+
+    @Test
+    func standardSubscriptionCategoryIsResolved() {
+        let result = SubscriptionCategory.resolvedValue(
+            selection: SubscriptionCategory.fitness.rawValue,
+            customValue: ""
+        )
+
+        #expect(result == "Fitness")
+    }
+
+    @Test
+    func customSubscriptionCategoryIsTrimmed() {
+        let result = SubscriptionCategory.resolvedValue(
+            selection: SubscriptionCategory.customSelectionValue,
+            customValue: "  Utilities  "
+        )
+
+        #expect(result == "Utilities")
+    }
+
+    @Test
+    func emptyCustomSubscriptionCategoryIsRejected() {
+        let result = SubscriptionCategory.resolvedValue(
+            selection: SubscriptionCategory.customSelectionValue,
+            customValue: "   "
+        )
+
+        #expect(result == nil)
+    }
+
+    @Test
+    func existingCustomCategoryIsPreservedForEditing() {
+        let result = SubscriptionCategory.selectionValues(
+            for: "Professional Memberships"
+        )
+
+        #expect(
+            result.selection ==
+            SubscriptionCategory.customSelectionValue
+        )
+        #expect(
+            result.customValue ==
+            "Professional Memberships"
+        )
+    }
+
+    @Test
+    func existingStandardCategoryRemainsStandard() {
+        let result = SubscriptionCategory.selectionValues(
+            for: SubscriptionCategory.software.rawValue
+        )
+
+        #expect(
+            result.selection ==
+            SubscriptionCategory.software.rawValue
+        )
+        #expect(result.customValue.isEmpty)
+    }
     
     @Test
     func cancellationSavingsUsesNormalizedValues() {
@@ -302,6 +557,65 @@ struct SubscriptionTrackerTests {
         #expect(components.year == 2027)
         #expect(components.month == 8)
         #expect(components.day == 13)
+    }
+
+    @Test
+    func weeklyRenewalAdvancesSevenDays() throws {
+        let calendar = Calendar.current
+        let start = try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2027,
+                    month: 1,
+                    day: 1
+                )
+            )
+        )
+
+        let result = RenewalCalculator.nextRenewalDate(
+            after: start,
+            billingFrequency: .weekly,
+            calendar: calendar
+        )
+
+        let expected = calendar.date(
+            byAdding: .day,
+            value: 7,
+            to: start
+        )
+
+        #expect(result == expected)
+    }
+
+    @Test
+    func quarterlyRenewalPreservesMonthEnd() throws {
+        let calendar = Calendar.current
+        let start = try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2027,
+                    month: 1,
+                    day: 31
+                )
+            )
+        )
+
+        let result = try #require(
+            RenewalCalculator.nextRenewalDate(
+                after: start,
+                billingFrequency: .quarterly,
+                calendar: calendar
+            )
+        )
+
+        let components = calendar.dateComponents(
+            [.year, .month, .day],
+            from: result
+        )
+
+        #expect(components.year == 2027)
+        #expect(components.month == 4)
+        #expect(components.day == 30)
     }
     
     @Test
@@ -624,6 +938,58 @@ struct SubscriptionTrackerTests {
                 "\"Shared \"\"family\"\" plan\""
             )
         )
+    }
+
+    @Test
+    func csvExportNeutralizesFormulaInjectionPrefixes() {
+        let unsafeValues = [
+            "=2+2",
+            "+SUM(A1:A2)",
+            "-10+20",
+            "@SUM(A1:A2)",
+            "   =2+2"
+        ]
+
+        for unsafeValue in unsafeValues {
+            let subscription = Subscription(
+                name: unsafeValue,
+                price: Decimal(10),
+                billingFrequency: .monthly,
+                nextBillingDate: Date()
+            )
+
+            let csv = SubscriptionCSVExporter.csvString(
+                for: [subscription],
+                currencyCode: "USD"
+            )
+
+            #expect(
+                csv.contains(
+                    "\"'\(unsafeValue)\""
+                )
+            )
+        }
+    }
+
+    @Test
+    func csvExportDoesNotModifySafeTextFields() {
+        let subscription = Subscription(
+            name: "Normal Service",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date(),
+            notes: "Shared family plan"
+        )
+
+        let csv = SubscriptionCSVExporter.csvString(
+            for: [subscription],
+            currencyCode: "USD"
+        )
+
+        #expect(csv.contains("\"Normal Service\""))
+        #expect(csv.contains("\"Shared family plan\""))
+        #expect(!csv.contains("\"'Normal Service\""))
+        #expect(!csv.contains("\"'Shared family plan\""))
     }
     
     @Test
@@ -1196,5 +1562,162 @@ struct SubscriptionTrackerTests {
                 ]
             )
         )
+    }
+
+    @Test
+    func priceChangeRecorderRecordsPriceChange() {
+        let subscription = Subscription(
+            name: "Streaming",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        let recorded =
+            SubscriptionPriceChangeRecorder.recordChange(
+                for: subscription,
+                newPrice: Decimal(12),
+                newBillingFrequency: .monthly
+            )
+
+        #expect(recorded)
+        #expect(subscription.priceChanges.count == 1)
+
+        let change = subscription.priceChanges[0]
+
+        #expect(change.previousPrice == Decimal(10))
+        #expect(change.newPrice == Decimal(12))
+        #expect(
+            change.previousBillingFrequency == .monthly
+        )
+        #expect(
+            change.newBillingFrequency == .monthly
+        )
+    }
+
+    @Test
+    func priceChangeRecorderRecordsBillingFrequencyChange() {
+        let subscription = Subscription(
+            name: "Software",
+            price: Decimal(120),
+            billingFrequency: .yearly,
+            nextBillingDate: Date()
+        )
+
+        let recorded =
+            SubscriptionPriceChangeRecorder.recordChange(
+                for: subscription,
+                newPrice: Decimal(120),
+                newBillingFrequency: .monthly
+            )
+
+        #expect(recorded)
+        #expect(subscription.priceChanges.count == 1)
+
+        let change = subscription.priceChanges[0]
+
+        #expect(
+            change.previousBillingFrequency == .yearly
+        )
+        #expect(
+            change.newBillingFrequency == .monthly
+        )
+    }
+
+    @Test
+    func priceChangeRecorderDoesNotRecordUnchangedValues() {
+        let subscription = Subscription(
+            name: "Cloud Storage",
+            price: Decimal(15),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        let recorded =
+            SubscriptionPriceChangeRecorder.recordChange(
+                for: subscription,
+                newPrice: Decimal(15),
+                newBillingFrequency: .monthly
+            )
+
+        #expect(recorded == false)
+        #expect(subscription.priceChanges.isEmpty)
+    }
+
+    @Test
+    func priceChangeRecorderPreservesMultipleChanges() {
+        let subscription = Subscription(
+            name: "AI Service",
+            price: Decimal(20),
+            billingFrequency: .monthly,
+            nextBillingDate: Date()
+        )
+
+        SubscriptionPriceChangeRecorder.recordChange(
+            for: subscription,
+            newPrice: Decimal(25),
+            newBillingFrequency: .monthly
+        )
+
+        subscription.price = Decimal(25)
+
+        SubscriptionPriceChangeRecorder.recordChange(
+            for: subscription,
+            newPrice: Decimal(30),
+            newBillingFrequency: .monthly
+        )
+
+        #expect(subscription.priceChanges.count == 2)
+        #expect(
+            subscription.priceChanges[0].previousPrice ==
+            Decimal(20)
+        )
+        #expect(
+            subscription.priceChanges[1].previousPrice ==
+            Decimal(25)
+        )
+    }
+
+    @Test
+    func cancellationSavingsWithNoSelections() {
+        let summary = CancellationSavingsCalculator.summary(
+            forMonthlyCosts: []
+        )
+
+        #expect(summary.selectedCount == 0)
+        #expect(summary.monthlySavings == .zero)
+        #expect(summary.yearlySavings == .zero)
+    }
+
+    @Test
+    func cancellationSavingsCombinesSelectedSubscriptions() {
+        let summary = CancellationSavingsCalculator.summary(
+            forMonthlyCosts: [
+                Decimal(string: "9.99")!,
+                Decimal(string: "20.00")!,
+                Decimal(string: "5.50")!
+            ]
+        )
+
+        #expect(summary.selectedCount == 3)
+        #expect(summary.monthlySavings == Decimal(string: "35.49")!)
+        #expect(summary.yearlySavings == Decimal(string: "425.88")!)
+    }
+
+    @Test
+    func cancellationSavingsSupportsYearlyEquivalentCosts() {
+        let yearlySubscriptionMonthlyCost =
+            Decimal(string: "240.00")! / 12
+
+        let summary = CancellationSavingsCalculator.summary(
+            forMonthlyCosts: [
+                yearlySubscriptionMonthlyCost,
+                Decimal(string: "15.99")!
+            ]
+        )
+
+        #expect(summary.selectedCount == 2)
+        #expect(summary.monthlySavings == Decimal(string: "35.99")!)
+        #expect(summary.yearlySavings == Decimal(string: "431.88")!)
     }
 }

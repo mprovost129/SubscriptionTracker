@@ -33,12 +33,7 @@ struct SubscriptionDetailView: View {
     }
 
     private var billingLabel: String {
-        switch subscription.billingFrequency {
-        case .monthly:
-            return "Monthly"
-        case .yearly:
-            return "Yearly"
-        }
+        subscription.billingFrequency.displayName
     }
     
     private var reminderStatusText: String {
@@ -46,7 +41,13 @@ struct SubscriptionDetailView: View {
             return "Off (Canceled)"
         }
 
-        return subscription.reminderEnabled ? "On" : "Off"
+        guard subscription.reminderEnabled else {
+            return "Off"
+        }
+
+        return AppSettings.reminderTimingText(
+            for: subscription.reminderDaysBefore
+        )
     }
     
     private var renewalDateAfterMarkingRenewed: Date? {
@@ -184,6 +185,20 @@ struct SubscriptionDetailView: View {
             showingPersistenceError = true
         }
     }
+
+    private var sortedPriceChanges: [SubscriptionPriceChange] {
+        subscription.priceChanges.sorted {
+            $0.changedAt > $1.changedAt
+        }
+    }
+
+    private var changeCountText: String {
+        let count = sortedPriceChanges.count
+
+        return count == 1
+            ? "1 Change"
+            : "\(count) Changes"
+    }
     
     var body: some View {
         Form {
@@ -228,6 +243,21 @@ struct SubscriptionDetailView: View {
                 )
             }
             .headerProminence(.increased)
+            
+            if !sortedPriceChanges.isEmpty {
+                Section {
+                    NavigationLink {
+                        SubscriptionPriceHistoryView(
+                            subscription: subscription
+                        )
+                    } label: {
+                        LabeledContent(
+                            "Price History",
+                            value: changeCountText
+                        )
+                    }
+                }
+            }
             
             if subscription.status == .active {
                 Section("Renewal") {

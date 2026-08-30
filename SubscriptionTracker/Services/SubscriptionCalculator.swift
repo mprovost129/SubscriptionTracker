@@ -7,9 +7,15 @@ struct SubscriptionCalculator {
         billingFrequency: BillingFrequency
     ) -> Decimal {
         switch billingFrequency {
+        case .weekly:
+            return price * 52 / 12
+
         case .monthly:
             return price
-            
+
+        case .quarterly:
+            return price / 3
+
         case .yearly:
             return price / 12
         }
@@ -20,9 +26,15 @@ struct SubscriptionCalculator {
         billingFrequency: BillingFrequency
     ) -> Decimal {
         switch billingFrequency {
+        case .weekly:
+            return price * 52
+
         case .monthly:
             return price * 12
-            
+
+        case .quarterly:
+            return price * 4
+
         case .yearly:
             return price
         }

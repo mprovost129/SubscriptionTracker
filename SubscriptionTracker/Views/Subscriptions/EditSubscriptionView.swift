@@ -5,8 +5,6 @@ struct EditSubscriptionView: View {
     
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dynamicTypeSize)
-    private var dynamicTypeSize
     
     let subscription: Subscription
 
@@ -14,15 +12,14 @@ struct EditSubscriptionView: View {
     @State private var price: String
     @State private var billingFrequency: BillingFrequency
     @State private var nextBillingDate: Date
-    @State private var category: SubscriptionCategory
+    @State private var categorySelection: String
+    @State private var customCategory: String
     @State private var notes: String
     @State private var reminderEnabled: Bool
+    @State private var reminderDaysBefore: Int
     @State private var showingSaveError = false
     @State private var saveErrorMessage = ""
-    
-    @AppStorage(AppSettings.reminderDaysBeforeKey)
-    private var reminderDaysBefore =
-        AppSettings.defaultReminderDaysBefore
+    @State private var isSaving = false
     
     @AppStorage(AppSettings.currencyCodeKey)
     private var currencyCode =
@@ -35,13 +32,25 @@ struct EditSubscriptionView: View {
         _price = State(initialValue: subscription.price.description)
         _billingFrequency = State(initialValue: subscription.billingFrequency)
         _nextBillingDate = State(initialValue: subscription.nextBillingDate)
-        _category = State(
-            initialValue:
-                SubscriptionCategory(rawValue: subscription.category)
-                ?? .other
+        let categoryValues =
+            SubscriptionCategory.selectionValues(
+                for: subscription.category
+            )
+
+        _categorySelection = State(
+            initialValue: categoryValues.selection
+        )
+        _customCategory = State(
+            initialValue: categoryValues.customValue
         )
         _notes = State(initialValue: subscription.notes)
         _reminderEnabled = State(initialValue: subscription.reminderEnabled)
+        _reminderDaysBefore = State(
+            initialValue:
+                AppSettings.normalizedReminderDays(
+                    subscription.reminderDaysBefore
+                )
+        )
     }
 
     private var normalizedPrice: Decimal? {
@@ -55,13 +64,21 @@ struct EditSubscriptionView: View {
         )
     }
 
+    private var resolvedCategory: String? {
+        SubscriptionCategory.resolvedValue(
+            selection: categorySelection,
+            customValue: customCategory
+        )
+    }
+
     private var canSave: Bool {
         guard
             !name.trimmingCharacters(
                 in: .whitespacesAndNewlines
             ).isEmpty,
             let normalizedPrice,
-            normalizedPrice > 0
+            normalizedPrice > 0,
+            resolvedCategory != nil
         else {
             return false
         }
@@ -74,11 +91,32 @@ struct EditSubscriptionView: View {
             "Billing",
             selection: $billingFrequency
         ) {
-            Text("Monthly")
-                .tag(BillingFrequency.monthly)
+            ForEach(
+                BillingFrequency.allCases,
+                id: \.self
+            ) { frequency in
+                Text(frequency.displayName)
+                    .tag(frequency)
+            }
+        }
+    }
 
-            Text("Yearly")
-                .tag(BillingFrequency.yearly)
+    private var reminderTimingPicker: some View {
+        Picker(
+            "Reminder Timing",
+            selection: $reminderDaysBefore
+        ) {
+            ForEach(
+                AppSettings.supportedReminderDays,
+                id: \.self
+            ) { days in
+                Text(
+                    AppSettings.reminderTimingText(
+                        for: days
+                    )
+                )
+                .tag(days)
+            }
         }
     }
     
@@ -105,12 +143,7 @@ struct EditSubscriptionView: View {
                             .accessibilityLabel("Price")
                     }
                     
-                    if dynamicTypeSize.isAccessibilitySize {
-                        billingPicker
-                    } else {
-                        billingPicker
-                            .pickerStyle(.segmented)
-                    }
+                    billingPicker
 
                     DatePicker(
                         "Next Renewal Date",
@@ -138,10 +171,45 @@ struct EditSubscriptionView: View {
                 .headerProminence(.increased)
 
                 Section {
-                    Picker("Category", selection: $category) {
-                        ForEach(SubscriptionCategory.allCases, id: \.self) { category in
+                    Picker(
+                        "Category",
+                        selection: $categorySelection
+                    ) {
+                        ForEach(
+                            SubscriptionCategory.allCases,
+                            id: \.self
+                        ) { category in
                             Text(category.rawValue)
-                                .tag(category)
+                                .tag(category.rawValue)
+                        }
+
+                        Text("Custom")
+                            .tag(
+                                SubscriptionCategory.customSelectionValue
+                            )
+                    }
+
+                    if categorySelection ==
+                        SubscriptionCategory.customSelectionValue {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Custom Category")
+                                .font(.caption)
+                                .foregroundStyle(.primary)
+
+                            TextField(
+                                "",
+                                text: $customCategory
+                            )
+                            .textInputAutocapitalization(.words)
+                            .accessibilityLabel("Custom Category")
+
+                            if customCategory.trimmingCharacters(
+                                in: .whitespacesAndNewlines
+                            ).isEmpty {
+                                Text("Enter a category name.")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
                         }
                     }
 
@@ -165,8 +233,10 @@ struct EditSubscriptionView: View {
                     )
 
                     if reminderEnabled {
+                        reminderTimingPicker
+
                         Text(
-                            "Reminder will be sent \(reminderDaysBefore) days before renewal."
+                            "Reminder timing: \(AppSettings.reminderTimingText(for: reminderDaysBefore))."
                         )
                         .font(.caption)
                         .foregroundStyle(.primary)
@@ -192,7 +262,7 @@ struct EditSubscriptionView: View {
                             await saveChanges()
                         }
                     }
-                    .disabled(!canSave)
+                    .disabled(isSaving || !canSave)
                 }
             }
             .alert(
@@ -208,10 +278,25 @@ struct EditSubscriptionView: View {
     }
 
     private func saveChanges() async {
+        guard !isSaving else { return }
+
+        isSaving = true
+        defer { isSaving = false }
+
         guard let normalizedPrice,
-              normalizedPrice > 0 else {
+              normalizedPrice > 0,
+              let resolvedCategory else {
             return
         }
+
+        let changedAt = Date()
+
+        SubscriptionPriceChangeRecorder.recordChange(
+            for: subscription,
+            newPrice: normalizedPrice,
+            newBillingFrequency: billingFrequency,
+            changedAt: changedAt
+        )
 
         subscription.name = name.trimmingCharacters(
             in: .whitespacesAndNewlines
@@ -219,14 +304,19 @@ struct EditSubscriptionView: View {
         subscription.price = normalizedPrice
         subscription.billingFrequency = billingFrequency
         subscription.nextBillingDate = nextBillingDate
-        subscription.category = category.rawValue
+        subscription.category = resolvedCategory
         subscription.notes = notes
         subscription.reminderEnabled = reminderEnabled
-        subscription.updatedAt = Date()
+        subscription.reminderDaysBefore =
+            AppSettings.normalizedReminderDays(
+                reminderDaysBefore
+            )
+        subscription.updatedAt = changedAt
         
         do {
             try modelContext.save()
         } catch {
+            modelContext.rollback()
             saveErrorMessage = error.localizedDescription
             showingSaveError = true
             return
