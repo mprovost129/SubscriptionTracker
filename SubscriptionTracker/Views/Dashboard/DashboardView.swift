@@ -66,14 +66,22 @@ struct DashboardView: View {
         )
     }
 
-    private var activeSubscriptions: [Subscription] {
+    private var trialSubscriptions: [Subscription] {
         organizedSubscriptions.filter {
-            $0.status == .active
+            SubscriptionTrialCalculator
+                .isActiveTrial($0)
+        }
+    }
+
+    private var paidSubscriptions: [Subscription] {
+        organizedSubscriptions.filter {
+            SubscriptionTrialCalculator
+                .isPaidActiveSubscription($0)
         }
     }
 
     private var upcomingSubscriptions: [Subscription] {
-        activeSubscriptions
+        paidSubscriptions
     }
 
     private var canceledSubscriptions: [Subscription] {
@@ -140,6 +148,26 @@ struct DashboardView: View {
         }
         
         return "Due in \(days) days"
+    }
+
+    private func trialStatusText(
+        for subscription: Subscription
+    ) -> String {
+        guard let daysRemaining =
+            SubscriptionTrialCalculator.daysRemaining(
+                until: subscription.trialEndDate
+            ) else {
+            return "Trial Ended"
+        }
+
+        switch daysRemaining {
+        case 0:
+            return "Ends Today"
+        case 1:
+            return "Ends Tomorrow"
+        default:
+            return "Ends in \(daysRemaining) days"
+        }
     }
     
     var body: some View {
@@ -209,6 +237,94 @@ struct DashboardView: View {
                             )
                             
                             Divider()
+
+                            if !trialSubscriptions.isEmpty {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Free Trials")
+                                        .font(.title2)
+                                        .fontWeight(.semibold)
+
+                                    ForEach(
+                                        trialSubscriptions
+                                    ) { subscription in
+                                        NavigationLink {
+                                            SubscriptionDetailView(
+                                                subscription: subscription
+                                            )
+                                        } label: {
+                                            subscriptionRowLayout {
+                                                VStack(
+                                                    alignment: .leading,
+                                                    spacing: 3
+                                                ) {
+                                                    Text(subscription.name)
+                                                        .font(.headline)
+
+                                                    Text(
+                                                        trialStatusText(
+                                                            for: subscription
+                                                        )
+                                                    )
+                                                    .font(.caption)
+                                                    .fontWeight(.medium)
+
+                                                    if let trialEndDate =
+                                                        subscription.trialEndDate {
+                                                        Text(
+                                                            trialEndDate.formatted(
+                                                                date: .abbreviated,
+                                                                time: .omitted
+                                                            )
+                                                        )
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.primary)
+                                                    }
+
+                                                    Label(
+                                                        subscription.reminderEnabled
+                                                            ? "Reminder On"
+                                                            : "Reminder Off",
+                                                        systemImage:
+                                                            subscription.reminderEnabled
+                                                            ? "bell.fill"
+                                                            : "bell.slash"
+                                                    )
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.primary)
+                                                }
+                                                .frame(
+                                                    maxWidth: .infinity,
+                                                    alignment: .leading
+                                                )
+
+                                                VStack(
+                                                    alignment: .trailing,
+                                                    spacing: 3
+                                                ) {
+                                                    Text(
+                                                        subscription.price.formatted(
+                                                            .currency(
+                                                                code: currencyCode
+                                                            )
+                                                        )
+                                                    )
+                                                    .fontWeight(.semibold)
+
+                                                    Text("after trial")
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.primary)
+                                                }
+                                            }
+                                            .accessibilityElement(
+                                                children: .combine
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+
+                                        Divider()
+                                    }
+                                }
+                            }
                             
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Upcoming Renewals")
@@ -216,7 +332,8 @@ struct DashboardView: View {
                                     .fontWeight(.semibold)
                                 
                                 if upcomingSubscriptions.isEmpty {
-                                    if canceledSubscriptions.isEmpty {
+                                    if trialSubscriptions.isEmpty &&
+                                        canceledSubscriptions.isEmpty {
                                         if !trimmedSearchText.isEmpty {
                                             ContentUnavailableView {
                                                 Label(
@@ -275,6 +392,9 @@ struct DashboardView: View {
                                             Text("No upcoming renewals yet.")
                                                 .foregroundStyle(.primary)
                                         }
+                                    } else {
+                                        Text("No paid renewals yet.")
+                                            .foregroundStyle(.primary)
                                     }
                                 } else {
                                     

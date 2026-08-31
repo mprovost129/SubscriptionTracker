@@ -14,14 +14,21 @@ struct CategorySpendingInsight:
 
 enum SubscriptionInsightsCalculator {
     static func spendingByCategory(
-        for subscriptions: [Subscription]
+        for subscriptions: [Subscription],
+        on date: Date = Date(),
+        calendar: Calendar = .current
     ) -> [CategorySpendingInsight] {
-        let activeSubscriptions = subscriptions.filter {
-            $0.status == .active
+        let paidSubscriptions = subscriptions.filter {
+            SubscriptionTrialCalculator
+                .isPaidActiveSubscription(
+                    $0,
+                    on: date,
+                    calendar: calendar
+                )
         }
 
         let groupedSubscriptions = Dictionary(
-            grouping: activeSubscriptions
+            grouping: paidSubscriptions
         ) { subscription in
             let trimmedCategory =
                 subscription.category.trimmingCharacters(
@@ -40,12 +47,16 @@ enum SubscriptionInsightsCalculator {
                     monthlyCost:
                         SubscriptionCalculator
                             .totalMonthlyCost(
-                                for: subscriptions
+                                for: subscriptions,
+                                on: date,
+                                calendar: calendar
                             ),
                     annualCost:
                         SubscriptionCalculator
                             .totalAnnualCost(
-                                for: subscriptions
+                                for: subscriptions,
+                                on: date,
+                                calendar: calendar
                             )
                 )
             }
@@ -63,11 +74,18 @@ enum SubscriptionInsightsCalculator {
     }
 
     static func largestSubscriptions(
-        from subscriptions: [Subscription]
+        from subscriptions: [Subscription],
+        on date: Date = Date(),
+        calendar: Calendar = .current
     ) -> [Subscription] {
         subscriptions
             .filter {
-                $0.status == .active
+                SubscriptionTrialCalculator
+                    .isPaidActiveSubscription(
+                        $0,
+                        on: date,
+                        calendar: calendar
+                    )
             }
             .sorted { first, second in
                 let firstMonthlyCost =

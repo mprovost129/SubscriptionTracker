@@ -58,27 +58,53 @@ struct SubscriptionCalculator {
     }
     
     static func totalMonthlyCost(
-        for subscriptions: [Subscription]
+        for subscriptions: [Subscription],
+        on date: Date = Date(),
+        calendar: Calendar = .current
     ) -> Decimal {
         subscriptions
-            .filter { $0.status == .active }
-            .reduce(Decimal.zero) { total, subscription in
+            .filter {
+                SubscriptionTrialCalculator
+                    .isPaidActiveSubscription(
+                        $0,
+                        on: date,
+                        calendar: calendar
+                    )
+            }
+            .reduce(Decimal.zero) {
+                total,
+                subscription in
+
                 total + monthlyEquivalent(
                     price: subscription.price,
-                    billingFrequency: subscription.billingFrequency
+                    billingFrequency:
+                        subscription.billingFrequency
                 )
             }
     }
     
     static func totalAnnualCost(
-        for subscriptions: [Subscription]
+        for subscriptions: [Subscription],
+        on date: Date = Date(),
+        calendar: Calendar = .current
     ) -> Decimal {
         subscriptions
-            .filter { $0.status == .active }
-            .reduce(Decimal.zero) { total, subscription in
+            .filter {
+                SubscriptionTrialCalculator
+                    .isPaidActiveSubscription(
+                        $0,
+                        on: date,
+                        calendar: calendar
+                    )
+            }
+            .reduce(Decimal.zero) {
+                total,
+                subscription in
+
                 total + annualEquivalent(
                     price: subscription.price,
-                    billingFrequency: subscription.billingFrequency
+                    billingFrequency:
+                        subscription.billingFrequency
                 )
             }
     }
