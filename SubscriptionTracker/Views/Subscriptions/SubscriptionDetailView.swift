@@ -505,7 +505,7 @@ struct SubscriptionDetailView: View {
             }
         } message: {
             Text(
-                "This will keep the subscription record but remove it from active spending totals."
+                "This keeps the subscription record and stops future renewal reminders."
             )
         }
         
@@ -524,7 +524,7 @@ struct SubscriptionDetailView: View {
             }
         } message: {
             Text(
-                "This returns the subscription to active spending totals. Renewal reminders will resume if they are enabled."
+                "This returns the subscription to active status. Renewal reminders will resume if they are enabled."
             )
         }
         
