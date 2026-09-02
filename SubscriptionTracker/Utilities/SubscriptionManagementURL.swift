@@ -12,9 +12,20 @@ enum SubscriptionManagementURL {
             return ""
         }
 
-        let candidate = trimmed.contains("://")
-            ? trimmed
-            : "https://\(trimmed)"
+        let candidate: String
+
+        if let existingScheme =
+            URLComponents(string: trimmed)?
+                .scheme?.lowercased() {
+            guard existingScheme == "http" ||
+                    existingScheme == "https" else {
+                return nil
+            }
+
+            candidate = trimmed
+        } else {
+            candidate = "https://\(trimmed)"
+        }
 
         guard
             let url = URL(string: candidate),
