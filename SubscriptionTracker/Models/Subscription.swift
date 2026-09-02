@@ -99,6 +99,7 @@ final class Subscription {
     var trialEndDate: Date? = nil
     var category: String
     var notes: String
+    var managementURL: String = ""
     var reminderEnabled: Bool
     var reminderDaysBefore: Int = 3
     var status: SubscriptionStatus
@@ -119,6 +120,7 @@ final class Subscription {
         trialEndDate: Date? = nil,
         category: String = SubscriptionCategory.other.rawValue,
         notes: String = "",
+        managementURL: String = "",
         reminderEnabled: Bool = true,
         reminderDaysBefore: Int = AppSettings.defaultReminderDaysBefore,
         status: SubscriptionStatus = .active,
@@ -131,6 +133,7 @@ final class Subscription {
         self.trialEndDate = trialEndDate
         self.category = category
         self.notes = notes
+        self.managementURL = managementURL
         self.reminderEnabled = reminderEnabled
         self.reminderDaysBefore =
             AppSettings.normalizedReminderDays(
