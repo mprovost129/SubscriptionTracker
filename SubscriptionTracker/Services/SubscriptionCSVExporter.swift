@@ -10,6 +10,7 @@ enum SubscriptionCSVExporter {
         "Status",
         "Category",
         "Reminder Enabled",
+        "Manage URL",
         "Notes",
         "Cancellation Date"
     ]
@@ -48,6 +49,7 @@ enum SubscriptionCSVExporter {
                 statusText(for: subscription),
                 subscription.category,
                 subscription.reminderEnabled ? "Yes" : "No",
+                subscription.managementURL,
                 subscription.notes,
                 dateText(
                     for: subscription.cancellationDate,
