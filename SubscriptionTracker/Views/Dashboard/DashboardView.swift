@@ -16,6 +16,9 @@ struct DashboardView: View {
 
     @State private var categoryFilter =
         SubscriptionListOrganizer.allCategoriesFilter
+
+    @State private var dateFilter:
+        SubscriptionDateFilter = .all
     
     @State private var showingSettings = false
     @State private var showingInsights = false
@@ -72,7 +75,8 @@ struct DashboardView: View {
             statusFilter: statusFilter,
             billingFilter: billingFilter,
             sortOption: sortOption,
-            categoryFilter: categoryFilter
+            categoryFilter: categoryFilter,
+            dateFilter: dateFilter
         )
     }
 
@@ -105,6 +109,7 @@ struct DashboardView: View {
         || billingFilter != .all
         || categoryFilter !=
             SubscriptionListOrganizer.allCategoriesFilter
+        || dateFilter != .all
     }
     
     private var listOptionsAreModified: Bool {
@@ -118,6 +123,7 @@ struct DashboardView: View {
         billingFilter = .all
         categoryFilter =
             SubscriptionListOrganizer.allCategoriesFilter
+        dateFilter = .all
     }
     
     private var subscriptionRowLayout: AnyLayout {
@@ -566,6 +572,20 @@ struct DashboardView: View {
                             ) {
                                 ForEach(
                                     SubscriptionStatusFilter.allCases
+                                ) { filter in
+                                    Text(filter.rawValue)
+                                        .tag(filter)
+                                }
+                            }
+                        }
+
+                        Section("Date") {
+                            Picker(
+                                "Filter by Date",
+                                selection: $dateFilter
+                            ) {
+                                ForEach(
+                                    SubscriptionDateFilter.allCases
                                 ) { filter in
                                     Text(filter.rawValue)
                                         .tag(filter)
