@@ -42,6 +42,20 @@ enum SubscriptionBillingFilter:
     }
 }
 
+enum SubscriptionDateFilter:
+    String,
+    CaseIterable,
+    Identifiable {
+    case all = "All Dates"
+    case overdue = "Overdue"
+    case next7Days = "Next 7 Days"
+    case next30Days = "Next 30 Days"
+
+    var id: Self {
+        self
+    }
+}
+
 enum SubscriptionListOrganizer {
     static let allCategoriesFilter = "All Categories"
 
@@ -73,7 +87,10 @@ enum SubscriptionListOrganizer {
         statusFilter: SubscriptionStatusFilter,
         billingFilter: SubscriptionBillingFilter,
         sortOption: SubscriptionSortOption,
-        categoryFilter: String = allCategoriesFilter
+        categoryFilter: String = allCategoriesFilter,
+        dateFilter: SubscriptionDateFilter = .all,
+        referenceDate: Date = Date(),
+        calendar: Calendar = .current
     ) -> [Subscription] {
         subscriptions
             .filter {
@@ -92,6 +109,14 @@ enum SubscriptionListOrganizer {
                 matchesCategory(
                     $0,
                     filter: categoryFilter
+                )
+            }
+            .filter {
+                matchesDate(
+                    $0,
+                    filter: dateFilter,
+                    referenceDate: referenceDate,
+                    calendar: calendar
                 )
             }
             .sorted {
@@ -147,6 +172,41 @@ enum SubscriptionListOrganizer {
             filter,
             options: [.caseInsensitive, .diacriticInsensitive]
         ) == .orderedSame
+    }
+
+    private static func matchesDate(
+        _ subscription: Subscription,
+        filter: SubscriptionDateFilter,
+        referenceDate: Date,
+        calendar: Calendar
+    ) -> Bool {
+        switch filter {
+        case .all:
+            return true
+
+        case .overdue:
+            return RenewalCalculator.isOverdue(
+                subscription,
+                from: referenceDate,
+                calendar: calendar
+            )
+
+        case .next7Days:
+            return RenewalCalculator.isDueSoon(
+                subscription,
+                withinDays: 7,
+                from: referenceDate,
+                calendar: calendar
+            )
+
+        case .next30Days:
+            return RenewalCalculator.isDueSoon(
+                subscription,
+                withinDays: 30,
+                from: referenceDate,
+                calendar: calendar
+            )
+        }
     }
 
     private static func comesBefore(
