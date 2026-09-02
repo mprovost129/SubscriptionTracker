@@ -13,6 +13,9 @@ struct DashboardView: View {
     
     @State private var billingFilter:
         SubscriptionBillingFilter = .all
+
+    @State private var categoryFilter =
+        SubscriptionListOrganizer.allCategoriesFilter
     
     @State private var showingSettings = false
     @State private var showingInsights = false
@@ -42,6 +45,12 @@ struct DashboardView: View {
         )
     }
 
+    private var categoryOptions: [String] {
+        SubscriptionListOrganizer.categoryOptions(
+            from: subscriptions
+        )
+    }
+
     private var matchingSubscriptions: [Subscription] {
         guard !trimmedSearchText.isEmpty else {
             return subscriptions
@@ -62,7 +71,8 @@ struct DashboardView: View {
             matchingSubscriptions,
             statusFilter: statusFilter,
             billingFilter: billingFilter,
-            sortOption: sortOption
+            sortOption: sortOption,
+            categoryFilter: categoryFilter
         )
     }
 
@@ -93,6 +103,8 @@ struct DashboardView: View {
     private var filtersAreActive: Bool {
         statusFilter != .all
         || billingFilter != .all
+        || categoryFilter !=
+            SubscriptionListOrganizer.allCategoriesFilter
     }
     
     private var listOptionsAreModified: Bool {
@@ -104,6 +116,8 @@ struct DashboardView: View {
         sortOption = .renewalDate
         statusFilter = .all
         billingFilter = .all
+        categoryFilter =
+            SubscriptionListOrganizer.allCategoriesFilter
     }
     
     private var subscriptionRowLayout: AnyLayout {
@@ -514,6 +528,13 @@ struct DashboardView: View {
                         : "Search by name or category"
                 )
             )
+            .onChange(of: categoryOptions) { _, options in
+                if !options.contains(categoryFilter) {
+                    categoryFilter =
+                        SubscriptionListOrganizer
+                            .allCategoriesFilter
+                }
+            }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
@@ -562,6 +583,21 @@ struct DashboardView: View {
                                 ) { filter in
                                     Text(filter.rawValue)
                                         .tag(filter)
+                                }
+                            }
+                        }
+
+                        Section("Category") {
+                            Picker(
+                                "Filter by Category",
+                                selection: $categoryFilter
+                            ) {
+                                ForEach(
+                                    categoryOptions,
+                                    id: \.self
+                                ) { category in
+                                    Text(category)
+                                        .tag(category)
                                 }
                             }
                         }
