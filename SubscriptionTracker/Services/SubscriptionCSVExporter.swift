@@ -1,7 +1,7 @@
 import Foundation
 
 enum SubscriptionCSVExporter {
-    private static let columnTitles = [
+    private static let baseColumnTitles = [
         "Name",
         "Price",
         "Currency",
@@ -10,7 +10,6 @@ enum SubscriptionCSVExporter {
         "Status",
         "Category",
         "Reminder Enabled",
-        "Manage URL",
         "Notes",
         "Cancellation Date"
     ]
@@ -32,10 +31,25 @@ enum SubscriptionCSVExporter {
             return nameComparison == .orderedAscending
         }
 
+        let includesManagementURL = sortedSubscriptions.contains {
+            !$0.managementURL.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).isEmpty
+        }
+
+        var columnTitles = baseColumnTitles
+
+        if includesManagementURL {
+            columnTitles.insert(
+                "Manage URL",
+                at: 8
+            )
+        }
+
         let header = csvRow(columnTitles)
 
         let rows = sortedSubscriptions.map { subscription in
-            csvRow([
+            var values = [
                 subscription.name,
                 NSDecimalNumber(
                     decimal: subscription.price
@@ -49,13 +63,21 @@ enum SubscriptionCSVExporter {
                 statusText(for: subscription),
                 subscription.category,
                 subscription.reminderEnabled ? "Yes" : "No",
-                subscription.managementURL,
                 subscription.notes,
                 dateText(
                     for: subscription.cancellationDate,
                     calendar: calendar
                 )
-            ])
+            ]
+
+            if includesManagementURL {
+                values.insert(
+                    subscription.managementURL,
+                    at: 8
+                )
+            }
+
+            return csvRow(values)
         }
 
         return ([header] + rows)
