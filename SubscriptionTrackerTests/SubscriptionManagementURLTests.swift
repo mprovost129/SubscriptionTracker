@@ -38,6 +38,37 @@ struct SubscriptionManagementURLTests {
     }
 
     @Test
+    func managementURLAllowsCompleteWWWAddress() {
+        let result =
+            SubscriptionManagementURL.normalizedString(
+                from: "www.netflix.com"
+            )
+
+        #expect(result == "https://www.netflix.com")
+    }
+
+    @Test
+    func managementURLRejectsIncompleteHosts() {
+        #expect(
+            SubscriptionManagementURL.normalizedString(
+                from: "netflix"
+            ) == nil
+        )
+
+        #expect(
+            SubscriptionManagementURL.normalizedString(
+                from: "www.netflix"
+            ) == nil
+        )
+
+        #expect(
+            SubscriptionManagementURL.normalizedString(
+                from: "https://www.netflix"
+            ) == nil
+        )
+    }
+
+    @Test
     func managementURLRejectsNonWebSchemes() {
         #expect(
             SubscriptionManagementURL.normalizedString(
