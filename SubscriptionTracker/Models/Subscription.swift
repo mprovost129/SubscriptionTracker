@@ -96,6 +96,7 @@ final class Subscription {
     var price: Decimal
     var billingFrequency: BillingFrequency
     var nextBillingDate: Date
+    var trialEndDate: Date? = nil
     var category: String
     var notes: String
     var reminderEnabled: Bool
@@ -115,6 +116,7 @@ final class Subscription {
         price: Decimal,
         billingFrequency: BillingFrequency,
         nextBillingDate: Date,
+        trialEndDate: Date? = nil,
         category: String = SubscriptionCategory.other.rawValue,
         notes: String = "",
         reminderEnabled: Bool = true,
@@ -126,6 +128,7 @@ final class Subscription {
         self.price = price
         self.billingFrequency = billingFrequency
         self.nextBillingDate = nextBillingDate
+        self.trialEndDate = trialEndDate
         self.category = category
         self.notes = notes
         self.reminderEnabled = reminderEnabled

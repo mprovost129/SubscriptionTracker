@@ -360,10 +360,9 @@ struct RenewalCalendarView: View {
                                         .fontWeight(.semibold)
 
                                     Text(
-                                        subscription
-                                            .billingFrequency
-                                            .rawValue
-                                            .capitalized
+                                        calendarSubtitle(
+                                            for: subscription
+                                        )
                                     )
                                     .foregroundStyle(.primary)
 
@@ -383,10 +382,9 @@ struct RenewalCalendarView: View {
                                             .fontWeight(.semibold)
 
                                         Text(
-                                            subscription
-                                                .billingFrequency
-                                                .rawValue
-                                                .capitalized
+                                            calendarSubtitle(
+                                                for: subscription
+                                            )
                                         )
                                         .font(.caption)
                                         .foregroundStyle(.primary)
@@ -421,6 +419,21 @@ struct RenewalCalendarView: View {
                 }
             }
         }
+    }
+
+    private func calendarSubtitle(
+        for subscription: Subscription
+    ) -> String {
+        if SubscriptionTrialCalculator.isActiveTrial(
+            subscription
+        ) {
+            return "Trial Ends"
+        }
+
+        return subscription
+            .billingFrequency
+            .rawValue
+            .capitalized
     }
 
     private func changeMonth(by value: Int) {

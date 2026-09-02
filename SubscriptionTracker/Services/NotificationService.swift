@@ -3,6 +3,11 @@ import UserNotifications
 
 struct NotificationService {
     
+    struct ReminderText: Equatable {
+        let title: String
+        let body: String
+    }
+
     static func requestAuthorization() async throws -> Bool {
         let center = UNUserNotificationCenter.current()
         
@@ -38,9 +43,19 @@ struct NotificationService {
             from: actualReminderDate
         )
 
+        let currencyCode = UserDefaults.standard.string(
+            forKey: AppSettings.currencyCodeKey
+        ) ?? AppSettings.defaultCurrencyCode
+
+        let reminderText = reminderText(
+            for: subscription,
+            currencyCode: currencyCode,
+            calendar: calendar
+        )
+
         let content = UNMutableNotificationContent()
-        content.title = "\(subscription.name) renews soon"
-        content.body = renewalMessage(for: subscription)
+        content.title = reminderText.title
+        content.body = reminderText.body
         content.sound = .default
 
         let trigger = UNCalendarNotificationTrigger(
@@ -103,19 +118,48 @@ struct NotificationService {
         center.removeAllPendingNotificationRequests()
         center.removeAllDeliveredNotifications()
     }
-    
-    private static func renewalMessage(
-        for subscription: Subscription
-    ) -> String {
-        let currencyCode = UserDefaults.standard.string(
-            forKey: AppSettings.currencyCodeKey
-        ) ?? AppSettings.defaultCurrencyCode
-        
+
+    static func reminderText(
+        for subscription: Subscription,
+        currencyCode: String,
+        referenceDate: Date = Date(),
+        calendar: Calendar = .current
+    ) -> ReminderText {
         let amount = subscription.price.formatted(
             .currency(code: currencyCode)
         )
-        
-        return "\(amount) is due on \(subscription.nextBillingDate.formatted(date: .abbreviated, time: .omitted))."
+
+        if let trialEndDate = subscription.trialEndDate,
+           SubscriptionTrialCalculator.isActive(
+               trialEndDate: trialEndDate,
+               on: referenceDate,
+               calendar: calendar
+           ) {
+            let formattedTrialEndDate =
+                trialEndDate.formatted(
+                    date: .abbreviated,
+                    time: .omitted
+                )
+
+            return ReminderText(
+                title:
+                    "\(subscription.name) trial ends soon",
+                body:
+                    "Your free trial ends on \(formattedTrialEndDate). \(amount) \(subscription.billingFrequency.lowercaseDisplayName) billing begins then."
+            )
+        }
+
+        let formattedRenewalDate =
+            subscription.nextBillingDate.formatted(
+                date: .abbreviated,
+                time: .omitted
+            )
+
+        return ReminderText(
+            title: "\(subscription.name) renews soon",
+            body:
+                "\(amount) is due on \(formattedRenewalDate)."
+        )
     }
     
     private static func notificationIdentifier(

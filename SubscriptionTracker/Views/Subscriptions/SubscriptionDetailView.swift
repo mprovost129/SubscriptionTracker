@@ -32,6 +32,43 @@ struct SubscriptionDetailView: View {
         )
     }
 
+    private var activeTrialEndDate: Date? {
+        guard subscription.status == .active,
+              let trialEndDate = subscription.trialEndDate,
+              SubscriptionTrialCalculator.isActive(
+                  trialEndDate: trialEndDate
+              ) else {
+            return nil
+        }
+
+        return trialEndDate
+    }
+
+    private var trialDaysRemaining: Int? {
+        SubscriptionTrialCalculator.daysRemaining(
+            until: activeTrialEndDate
+        )
+    }
+
+    private var trialStatusText: String {
+        guard activeTrialEndDate != nil else {
+            return "Ended"
+        }
+
+        guard let trialDaysRemaining else {
+            return "Active"
+        }
+
+        switch trialDaysRemaining {
+        case 0:
+            return "Ends Today"
+        case 1:
+            return "1 Day Remaining"
+        default:
+            return "\(trialDaysRemaining) Days Remaining"
+        }
+    }
+
     private var billingLabel: String {
         subscription.billingFrequency.displayName
     }
@@ -206,19 +243,25 @@ struct SubscriptionDetailView: View {
                 LabeledContent("Name", value: subscription.name)
                 
                 LabeledContent(
-                    "Price",
+                    activeTrialEndDate != nil
+                        ? "Price After Trial"
+                        : "Price",
                     value: subscription.price.formatted(
                         .currency(code: currencyCode)
                     )
                 )
                 
                 LabeledContent(
-                    "Billing",
+                    activeTrialEndDate != nil
+                        ? "Billing After Trial"
+                        : "Billing",
                     value: billingLabel
                 )
                 
                 LabeledContent(
-                    "Next Renewal Date",
+                    activeTrialEndDate != nil
+                        ? "First Paid Renewal"
+                        : "Next Renewal Date",
                     value: subscription.nextBillingDate.formatted(
                         date: .abbreviated,
                         time: .omitted
@@ -233,7 +276,9 @@ struct SubscriptionDetailView: View {
                 )
                 
                 LabeledContent(
-                    "Renewal Reminder",
+                    activeTrialEndDate != nil
+                        ? "Trial Reminder"
+                        : "Renewal Reminder",
                     value: reminderStatusText
                 )
                 
@@ -243,6 +288,39 @@ struct SubscriptionDetailView: View {
                 )
             }
             .headerProminence(.increased)
+
+            if let trialEndDate =
+                subscription.trialEndDate {
+                Section("Free Trial") {
+                    LabeledContent(
+                        "Trial Status",
+                        value: trialStatusText
+                    )
+
+                    LabeledContent(
+                        "Trial End Date",
+                        value: trialEndDate.formatted(
+                            date: .abbreviated,
+                            time: .omitted
+                        )
+                    )
+
+                    if activeTrialEndDate != nil {
+                        Text(
+                            "The paid subscription begins when the free trial ends."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                    } else {
+                        Text(
+                            "This subscription previously had a free trial."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                    }
+                }
+                .headerProminence(.increased)
+            }
             
             if !sortedPriceChanges.isEmpty {
                 Section {
@@ -259,7 +337,8 @@ struct SubscriptionDetailView: View {
                 }
             }
             
-            if subscription.status == .active {
+            if subscription.status == .active &&
+                activeTrialEndDate == nil {
                 Section("Renewal") {
                     Button {
                         showingRenewedConfirmation = true
@@ -284,14 +363,18 @@ struct SubscriptionDetailView: View {
             
             Section("Cost") {
                 LabeledContent(
-                    "Monthly Equivalent",
+                    activeTrialEndDate != nil
+                        ? "Monthly After Trial"
+                        : "Monthly Equivalent",
                     value: monthlyEquivalent.formatted(
                         .currency(code: currencyCode)
                     )
                 )
                 
                 LabeledContent(
-                    "Annual Equivalent",
+                    activeTrialEndDate != nil
+                        ? "Annual After Trial"
+                        : "Annual Equivalent",
                     value: annualEquivalent.formatted(
                         .currency(code: currencyCode)
                     )
@@ -300,7 +383,7 @@ struct SubscriptionDetailView: View {
             .headerProminence(.increased)
             
             if subscription.status == .active {
-                Section("If You Cancel") {
+                Section {
                     LabeledContent(
                         "Monthly Savings",
                         value: monthlyEquivalent.formatted(
@@ -314,6 +397,13 @@ struct SubscriptionDetailView: View {
                             .currency(code: currencyCode)
                         )
                     )
+                } header: {
+                    Text(
+                        activeTrialEndDate != nil
+                            ? "If You Cancel Before Conversion"
+                            : "If You Cancel"
+                    )
+                    .foregroundStyle(.primary)
                 }
                 .headerProminence(.increased)
             }
@@ -415,7 +505,7 @@ struct SubscriptionDetailView: View {
             }
         } message: {
             Text(
-                "This will keep the subscription record but remove it from active spending totals."
+                "This keeps the subscription record and stops future renewal reminders."
             )
         }
         
@@ -434,7 +524,7 @@ struct SubscriptionDetailView: View {
             }
         } message: {
             Text(
-                "This returns the subscription to active spending totals. Renewal reminders will resume if they are enabled."
+                "This returns the subscription to active status. Renewal reminders will resume if they are enabled."
             )
         }
         

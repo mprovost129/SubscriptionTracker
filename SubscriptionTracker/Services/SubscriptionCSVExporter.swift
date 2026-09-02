@@ -111,7 +111,7 @@ enum SubscriptionCSVExporter {
         _ values: [String]
     ) -> String {
         values
-            .map(csvField)
+            .map { csvField($0) }
             .joined(separator: ",")
     }
 

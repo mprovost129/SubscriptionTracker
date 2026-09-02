@@ -12,6 +12,8 @@ struct EditSubscriptionView: View {
     @State private var price: String
     @State private var billingFrequency: BillingFrequency
     @State private var nextBillingDate: Date
+    @State private var hasFreeTrial: Bool
+    @State private var trialEndDate: Date
     @State private var categorySelection: String
     @State private var customCategory: String
     @State private var notes: String
@@ -32,6 +34,15 @@ struct EditSubscriptionView: View {
         _price = State(initialValue: subscription.price.description)
         _billingFrequency = State(initialValue: subscription.billingFrequency)
         _nextBillingDate = State(initialValue: subscription.nextBillingDate)
+        _hasFreeTrial = State(
+            initialValue: subscription.trialEndDate != nil
+        )
+
+        _trialEndDate = State(
+            initialValue:
+                subscription.trialEndDate ??
+                subscription.nextBillingDate
+        )
         let categoryValues =
             SubscriptionCategory.selectionValues(
                 for: subscription.category
@@ -71,6 +82,16 @@ struct EditSubscriptionView: View {
         )
     }
 
+    private var trialIsActive: Bool {
+        guard hasFreeTrial else {
+            return false
+        }
+
+        return SubscriptionTrialCalculator.isActive(
+            trialEndDate: trialEndDate
+        )
+    }
+
     private var canSave: Bool {
         guard
             !name.trimmingCharacters(
@@ -88,7 +109,9 @@ struct EditSubscriptionView: View {
 
     private var billingPicker: some View {
         Picker(
-            "Billing",
+            hasFreeTrial
+                ? "Billing After Trial"
+                : "Billing",
             selection: $billingFrequency
         ) {
             ForEach(
@@ -133,30 +156,85 @@ struct EditSubscriptionView: View {
                             .accessibilityLabel("Name")
                     }
 
+                    Toggle(
+                        "Free Trial",
+                        isOn: $hasFreeTrial
+                    )
+
+                    if hasFreeTrial {
+                        Text(
+                            trialIsActive
+                                ? "Enter what the subscription will cost after the free trial ends."
+                                : "This subscription previously had a free trial."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Price")
+                        Text(
+                            hasFreeTrial
+                                ? "Price After Trial"
+                                : "Price"
+                        )
                             .font(.caption)
                             .foregroundStyle(.primary)
 
                         TextField("", text: $price)
                             .keyboardType(.decimalPad)
-                            .accessibilityLabel("Price")
+                            .accessibilityLabel(
+                                hasFreeTrial
+                                    ? "Price After Trial"
+                                    : "Price"
+                            )
                     }
                     
                     billingPicker
 
-                    DatePicker(
-                        "Next Renewal Date",
-                        selection: $nextBillingDate,
-                        displayedComponents: .date
-                    )
+                    if hasFreeTrial {
+                        DatePicker(
+                            "Trial End Date",
+                            selection: $trialEndDate,
+                            displayedComponents: .date
+                        )
+
+                        if trialIsActive {
+                            Text(
+                                "The first paid renewal will be recorded on the trial end date."
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        } else {
+                            Text(
+                                "The trial has ended. Confirm the next paid renewal date."
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                            DatePicker(
+                                "Next Renewal Date",
+                                selection: $nextBillingDate,
+                                displayedComponents: .date
+                            )
+                        }
+                    } else {
+                        DatePicker(
+                            "Next Renewal Date",
+                            selection: $nextBillingDate,
+                            displayedComponents: .date
+                        )
+                    }
                     
                     if !price.isEmpty {
                         if let normalizedPrice {
                             if normalizedPrice <= 0 {
-                                Text("Price must be greater than zero.")
-                                    .font(.caption)
-                                    .foregroundStyle(.red)
+                                Text(
+                                    hasFreeTrial
+                                        ? "Post-trial price must be greater than zero."
+                                        : "Price must be greater than zero."
+                                )
+                                .font(.caption)
+                                .foregroundStyle(.red)
                             }
                         } else {
                             Text("Enter a valid price.")
@@ -290,6 +368,10 @@ struct EditSubscriptionView: View {
         }
 
         let changedAt = Date()
+        let effectiveNextBillingDate =
+            hasFreeTrial && trialIsActive
+                ? trialEndDate
+                : nextBillingDate
 
         SubscriptionPriceChangeRecorder.recordChange(
             for: subscription,
@@ -303,7 +385,12 @@ struct EditSubscriptionView: View {
         )
         subscription.price = normalizedPrice
         subscription.billingFrequency = billingFrequency
-        subscription.nextBillingDate = nextBillingDate
+        subscription.nextBillingDate =
+            effectiveNextBillingDate
+        subscription.trialEndDate =
+            hasFreeTrial
+                ? trialEndDate
+                : nil
         subscription.category = resolvedCategory
         subscription.notes = notes
         subscription.reminderEnabled = reminderEnabled

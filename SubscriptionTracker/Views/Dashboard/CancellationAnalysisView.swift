@@ -15,7 +15,10 @@ struct CancellationAnalysisView: View {
 
     private var activeSubscriptions: [Subscription] {
         subscriptions
-            .filter { $0.status == .active }
+            .filter {
+                SubscriptionTrialCalculator
+                    .isPaidActiveSubscription($0)
+            }
             .sorted {
                 $0.name.localizedCaseInsensitiveCompare(
                     $1.name

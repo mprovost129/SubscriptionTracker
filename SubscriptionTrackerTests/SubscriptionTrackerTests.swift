@@ -1408,6 +1408,125 @@ struct SubscriptionTrackerTests {
     }
 
     @Test
+    func insightsExcludeActiveTrialsFromCategorySpending() {
+        var calendar = Calendar(
+            identifier: .gregorian
+        )
+        calendar.timeZone =
+            TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 1
+            )
+        )!
+
+        let trialEndDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 10
+            )
+        )!
+
+        let paidSubscription = Subscription(
+            name: "Paid",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: referenceDate,
+            category:
+                SubscriptionCategory.productivity.rawValue
+        )
+
+        let trialSubscription = Subscription(
+            name: "Trial",
+            price: Decimal(100),
+            billingFrequency: .monthly,
+            nextBillingDate: trialEndDate,
+            trialEndDate: trialEndDate,
+            category:
+                SubscriptionCategory.business.rawValue
+        )
+
+        let insights =
+            SubscriptionInsightsCalculator
+                .spendingByCategory(
+                    for: [
+                        paidSubscription,
+                        trialSubscription
+                    ],
+                    on: referenceDate,
+                    calendar: calendar
+                )
+
+        #expect(insights.count == 1)
+        #expect(
+            insights[0].category ==
+                SubscriptionCategory.productivity.rawValue
+        )
+        #expect(insights[0].monthlyCost == Decimal(10))
+    }
+
+    @Test
+    func insightsExcludeActiveTrialsFromLargestSubscriptions() {
+        var calendar = Calendar(
+            identifier: .gregorian
+        )
+        calendar.timeZone =
+            TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 1
+            )
+        )!
+
+        let trialEndDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 10
+            )
+        )!
+
+        let paidSubscription = Subscription(
+            name: "Paid",
+            price: Decimal(10),
+            billingFrequency: .monthly,
+            nextBillingDate: referenceDate
+        )
+
+        let trialSubscription = Subscription(
+            name: "Trial",
+            price: Decimal(100),
+            billingFrequency: .monthly,
+            nextBillingDate: trialEndDate,
+            trialEndDate: trialEndDate
+        )
+
+        let rankedSubscriptions =
+            SubscriptionInsightsCalculator
+                .largestSubscriptions(
+                    from: [
+                        paidSubscription,
+                        trialSubscription
+                    ],
+                    on: referenceDate,
+                    calendar: calendar
+                )
+
+        #expect(
+            rankedSubscriptions.map(\.name) == [
+                "Paid"
+            ]
+        )
+    }
+
+    @Test
     func renewalCalendarReturnsEveryDayInThirtyOneDayMonth() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -1719,5 +1838,335 @@ struct SubscriptionTrackerTests {
         #expect(summary.selectedCount == 2)
         #expect(summary.monthlySavings == Decimal(string: "35.99")!)
         #expect(summary.yearlySavings == Decimal(string: "431.88")!)
+    }
+
+    @Test
+    func subscriptionWithoutTrialIsNotActiveTrial() {
+        let isActive =
+            SubscriptionTrialCalculator.isActive(
+                trialEndDate: nil
+            )
+
+        #expect(isActive == false)
+    }
+
+    @Test
+    func futureTrialIsActive() {
+        var calendar = Calendar(
+            identifier: .gregorian
+        )
+        calendar.timeZone =
+            TimeZone(secondsFromGMT: 0)!
+
+        let currentDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 1
+            )
+        )!
+
+        let trialEndDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 10
+            )
+        )!
+
+        let isActive =
+            SubscriptionTrialCalculator.isActive(
+                trialEndDate: trialEndDate,
+                on: currentDate,
+                calendar: calendar
+            )
+
+        #expect(isActive)
+    }
+
+    @Test
+    func expiredTrialIsNotActive() {
+        var calendar = Calendar(
+            identifier: .gregorian
+        )
+        calendar.timeZone =
+            TimeZone(secondsFromGMT: 0)!
+
+        let currentDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 10
+            )
+        )!
+
+        let trialEndDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 9
+            )
+        )!
+
+        let isActive =
+            SubscriptionTrialCalculator.isActive(
+                trialEndDate: trialEndDate,
+                on: currentDate,
+                calendar: calendar
+            )
+
+        #expect(isActive == false)
+    }
+
+    @Test
+    func trialEndingTodayHasZeroDaysRemaining() {
+        var calendar = Calendar(
+            identifier: .gregorian
+        )
+        calendar.timeZone =
+            TimeZone(secondsFromGMT: 0)!
+
+        let currentDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 10,
+                hour: 8
+            )
+        )!
+
+        let trialEndDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 10,
+                hour: 17
+            )
+        )!
+
+        let daysRemaining =
+            SubscriptionTrialCalculator.daysRemaining(
+                until: trialEndDate,
+                on: currentDate,
+                calendar: calendar
+            )
+
+        #expect(daysRemaining == 0)
+    }
+
+    @Test
+    func trialCalculatesRemainingCalendarDays() {
+        var calendar = Calendar(
+            identifier: .gregorian
+        )
+        calendar.timeZone =
+            TimeZone(secondsFromGMT: 0)!
+
+        let currentDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 1
+            )
+        )!
+
+        let trialEndDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 10
+            )
+        )!
+
+        let daysRemaining =
+            SubscriptionTrialCalculator.daysRemaining(
+                until: trialEndDate,
+                on: currentDate,
+                calendar: calendar
+            )
+
+        #expect(daysRemaining == 9)
+    }
+
+    @Test
+    func activeTrialReminderUsesTrialLanguage() {
+        var calendar = Calendar(
+            identifier: .gregorian
+        )
+        calendar.timeZone =
+            TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 1
+            )
+        )!
+
+        let trialEndDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 10
+            )
+        )!
+
+        let subscription = Subscription(
+            name: "Video Service",
+            price: Decimal(string: "9.99")!,
+            billingFrequency: .monthly,
+            nextBillingDate: trialEndDate,
+            trialEndDate: trialEndDate
+        )
+
+        let reminder =
+            NotificationService.reminderText(
+                for: subscription,
+                currencyCode: "USD",
+                referenceDate: referenceDate,
+                calendar: calendar
+            )
+
+        #expect(
+            reminder.title ==
+                "Video Service trial ends soon"
+        )
+        #expect(
+            reminder.body.contains(
+                "Your free trial ends"
+            )
+        )
+        #expect(
+            reminder.body.contains(
+                "monthly billing begins then"
+            )
+        )
+    }
+
+    @Test
+    func standardReminderUsesRenewalLanguage() {
+        let renewalDate = Date()
+
+        let subscription = Subscription(
+            name: "Cloud Storage",
+            price: Decimal(string: "2.99")!,
+            billingFrequency: .monthly,
+            nextBillingDate: renewalDate
+        )
+
+        let reminder =
+            NotificationService.reminderText(
+                for: subscription,
+                currencyCode: "USD"
+            )
+
+        #expect(
+            reminder.title ==
+                "Cloud Storage renews soon"
+        )
+        #expect(
+            reminder.body.contains("is due on")
+        )
+    }
+
+    @Test
+    func activeTrialDoesNotContributeToPaidTotals() {
+        var calendar = Calendar(
+            identifier: .gregorian
+        )
+        calendar.timeZone =
+            TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 1
+            )
+        )!
+
+        let trialEndDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 10
+            )
+        )!
+
+        let trial = Subscription(
+            name: "Trial Service",
+            price: Decimal(20),
+            billingFrequency: .monthly,
+            nextBillingDate: trialEndDate,
+            trialEndDate: trialEndDate
+        )
+
+        let monthly =
+            SubscriptionCalculator.totalMonthlyCost(
+                for: [trial],
+                on: referenceDate,
+                calendar: calendar
+            )
+
+        let annual =
+            SubscriptionCalculator.totalAnnualCost(
+                for: [trial],
+                on: referenceDate,
+                calendar: calendar
+            )
+
+        #expect(monthly == .zero)
+        #expect(annual == .zero)
+    }
+
+    @Test
+    func endedTrialContributesToPaidTotals() {
+        var calendar = Calendar(
+            identifier: .gregorian
+        )
+        calendar.timeZone =
+            TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 10
+            )
+        )!
+
+        let trialEndDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 9
+            )
+        )!
+
+        let subscription = Subscription(
+            name: "Converted Service",
+            price: Decimal(20),
+            billingFrequency: .monthly,
+            nextBillingDate: referenceDate,
+            trialEndDate: trialEndDate
+        )
+
+        let monthly =
+            SubscriptionCalculator.totalMonthlyCost(
+                for: [subscription],
+                on: referenceDate,
+                calendar: calendar
+            )
+
+        let annual =
+            SubscriptionCalculator.totalAnnualCost(
+                for: [subscription],
+                on: referenceDate,
+                calendar: calendar
+            )
+
+        #expect(monthly == Decimal(20))
+        #expect(annual == Decimal(240))
     }
 }

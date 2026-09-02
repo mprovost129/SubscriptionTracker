@@ -9,6 +9,13 @@ struct AddSubscriptionView: View {
     @State private var price = ""
     @State private var billingFrequency: BillingFrequency = .monthly
     @State private var nextBillingDate = Date()
+    @State private var hasFreeTrial = false
+    @State private var trialEndDate =
+        Calendar.current.date(
+            byAdding: .day,
+            value: 7,
+            to: Date()
+        ) ?? Date()
     @State private var categorySelection =
         SubscriptionCategory.other.rawValue
     @State private var customCategory = ""
@@ -67,7 +74,9 @@ struct AddSubscriptionView: View {
 
     private var billingPicker: some View {
         Picker(
-            "Billing",
+            hasFreeTrial
+                ? "Billing After Trial"
+                : "Billing",
             selection: $billingFrequency
         ) {
             ForEach(
@@ -112,30 +121,72 @@ struct AddSubscriptionView: View {
                             .accessibilityLabel("Name")
                     }
 
+                    Toggle(
+                        "Free Trial",
+                        isOn: $hasFreeTrial
+                    )
+
+                    if hasFreeTrial {
+                        Text(
+                            "Enter what the subscription will cost after the free trial ends."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Price")
+                        Text(
+                            hasFreeTrial
+                                ? "Price After Trial"
+                                : "Price"
+                        )
                             .font(.caption)
                             .foregroundStyle(.primary)
 
                         TextField("", text: $price)
                             .keyboardType(.decimalPad)
-                            .accessibilityLabel("Price")
+                            .accessibilityLabel(
+                                hasFreeTrial
+                                    ? "Price After Trial"
+                                    : "Price"
+                            )
                     }
 
                     billingPicker
-                    
-                    DatePicker(
-                        "Next Renewal Date",
-                        selection: $nextBillingDate,
-                        displayedComponents: .date
-                    )
-                    
+
+                    if hasFreeTrial {
+                        DatePicker(
+                            "Trial End Date",
+                            selection: $trialEndDate,
+                            in: Calendar.current.startOfDay(
+                                for: Date()
+                            )...,
+                            displayedComponents: .date
+                        )
+
+                        Text(
+                            "The first paid renewal will be recorded on the trial end date."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    } else {
+                        DatePicker(
+                            "Next Renewal Date",
+                            selection: $nextBillingDate,
+                            displayedComponents: .date
+                        )
+                    }
+
                     if !price.isEmpty {
                         if let normalizedPrice {
                             if normalizedPrice <= 0 {
-                                Text("Price must be greater than zero.")
-                                    .font(.caption)
-                                    .foregroundStyle(.red)
+                                Text(
+                                    hasFreeTrial
+                                        ? "Post-trial price must be greater than zero."
+                                        : "Price must be greater than zero."
+                                )
+                                .font(.caption)
+                                .foregroundStyle(.red)
                             }
                         } else {
                             Text("Enter a valid price.")
@@ -275,11 +326,19 @@ struct AddSubscriptionView: View {
             return
         }
 
+        let effectiveNextBillingDate =
+            hasFreeTrial
+                ? trialEndDate
+                : nextBillingDate
+
         let subscription = Subscription(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             price: normalizedPrice,
             billingFrequency: billingFrequency,
-            nextBillingDate: nextBillingDate,
+            nextBillingDate: effectiveNextBillingDate,
+            trialEndDate: hasFreeTrial
+                ? trialEndDate
+                : nil,
             category: resolvedCategory,
             notes: notes,
             reminderEnabled: reminderEnabled,
