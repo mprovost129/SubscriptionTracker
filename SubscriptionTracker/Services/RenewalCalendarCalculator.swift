@@ -84,4 +84,18 @@ enum RenewalCalendarCalculator {
             )
         }
     }
+
+    static func isTrialEndEvent(
+        _ subscription: Subscription,
+        calendar: Calendar = .current
+    ) -> Bool {
+        guard let trialEndDate = subscription.trialEndDate else {
+            return false
+        }
+
+        return calendar.isDate(
+            subscription.nextBillingDate,
+            inSameDayAs: trialEndDate
+        )
+    }
 }
