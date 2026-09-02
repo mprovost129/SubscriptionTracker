@@ -32,7 +32,7 @@ enum SubscriptionManagementURL {
             let scheme = url.scheme?.lowercased(),
             scheme == "http" || scheme == "https",
             let host = url.host,
-            !host.isEmpty
+            isAcceptableWebHost(host)
         else {
             return nil
         }
@@ -53,5 +53,31 @@ enum SubscriptionManagementURL {
         }
 
         return URL(string: normalized)
+    }
+
+    private static func isAcceptableWebHost(
+        _ host: String
+    ) -> Bool {
+        let hostParts = host
+            .lowercased()
+            .split(
+                separator: ".",
+                omittingEmptySubsequences: false
+            )
+            .map(String.init)
+
+        guard !hostParts.contains(where: { $0.isEmpty }) else {
+            return false
+        }
+
+        let domainParts: ArraySlice<String>
+
+        if hostParts.first == "www" {
+            domainParts = hostParts.dropFirst()
+        } else {
+            domainParts = hostParts[...]
+        }
+
+        return domainParts.count >= 2
     }
 }
