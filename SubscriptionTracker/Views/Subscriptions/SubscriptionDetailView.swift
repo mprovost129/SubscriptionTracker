@@ -72,6 +72,12 @@ struct SubscriptionDetailView: View {
     private var billingLabel: String {
         subscription.billingFrequency.displayName
     }
+
+    private var managementURL: URL? {
+        SubscriptionManagementURL.url(
+            from: subscription.managementURL
+        )
+    }
     
     private var reminderStatusText: String {
         guard subscription.status == .active else {
@@ -288,6 +294,25 @@ struct SubscriptionDetailView: View {
                 )
             }
             .headerProminence(.increased)
+
+            if let managementURL {
+                Section("Management") {
+                    Link(destination: managementURL) {
+                        Label(
+                            "Manage Subscription",
+                            systemImage: "arrow.up.right.square"
+                        )
+                        .fontWeight(.semibold)
+                    }
+                    .foregroundStyle(.primary)
+
+                    Text(subscription.managementURL)
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                        .textSelection(.enabled)
+                }
+                .headerProminence(.increased)
+            }
 
             if let trialEndDate =
                 subscription.trialEndDate {
