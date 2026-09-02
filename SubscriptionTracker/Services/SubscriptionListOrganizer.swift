@@ -48,8 +48,8 @@ enum SubscriptionListOrganizer {
     static func categoryOptions(
         from subscriptions: [Subscription]
     ) -> [String] {
-        let categories = Set(
-            subscriptions.compactMap { subscription in
+        let categorySet: Set<String> = Set(
+            subscriptions.compactMap { subscription -> String? in
                 let category = subscription.category
                     .trimmingCharacters(
                         in: .whitespacesAndNewlines
@@ -58,8 +58,10 @@ enum SubscriptionListOrganizer {
                 return category.isEmpty ? nil : category
             }
         )
-        .sorted {
-            $0.localizedStandardCompare($1)
+
+        let categories = categorySet.sorted {
+            (first: String, second: String) in
+            first.localizedStandardCompare(second)
                 == .orderedAscending
         }
 
