@@ -424,8 +424,9 @@ struct RenewalCalendarView: View {
     private func calendarSubtitle(
         for subscription: Subscription
     ) -> String {
-        if SubscriptionTrialCalculator.isActiveTrial(
-            subscription
+        if RenewalCalendarCalculator.isTrialEndEvent(
+            subscription,
+            calendar: calendar
         ) {
             return "Trial Ends"
         }
