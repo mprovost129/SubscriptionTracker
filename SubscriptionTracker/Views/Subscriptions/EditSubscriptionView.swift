@@ -17,6 +17,7 @@ struct EditSubscriptionView: View {
     @State private var categorySelection: String
     @State private var customCategory: String
     @State private var notes: String
+    @State private var managementURL: String
     @State private var reminderEnabled: Bool
     @State private var reminderDaysBefore: Int
     @State private var showingSaveError = false
@@ -55,6 +56,9 @@ struct EditSubscriptionView: View {
             initialValue: categoryValues.customValue
         )
         _notes = State(initialValue: subscription.notes)
+        _managementURL = State(
+            initialValue: subscription.managementURL
+        )
         _reminderEnabled = State(initialValue: subscription.reminderEnabled)
         _reminderDaysBefore = State(
             initialValue:
@@ -82,6 +86,12 @@ struct EditSubscriptionView: View {
         )
     }
 
+    private var normalizedManagementURL: String? {
+        SubscriptionManagementURL.normalizedString(
+            from: managementURL
+        )
+    }
+
     private var trialIsActive: Bool {
         guard hasFreeTrial else {
             return false
@@ -99,7 +109,8 @@ struct EditSubscriptionView: View {
             ).isEmpty,
             let normalizedPrice,
             normalizedPrice > 0,
-            resolvedCategory != nil
+            resolvedCategory != nil,
+            normalizedManagementURL != nil
         else {
             return false
         }
@@ -305,6 +316,29 @@ struct EditSubscriptionView: View {
                         .accessibilityLabel("Notes")
                     }
 
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Manage URL (Optional)")
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+
+                        TextField(
+                            "example.com/account",
+                            text: $managementURL
+                        )
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .accessibilityLabel("Manage URL")
+
+                        if !managementURL.trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        ).isEmpty && normalizedManagementURL == nil {
+                            Text("Enter a valid website address.")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
+
                     Toggle(
                         "Renewal Reminder",
                         isOn: $reminderEnabled
@@ -363,7 +397,8 @@ struct EditSubscriptionView: View {
 
         guard let normalizedPrice,
               normalizedPrice > 0,
-              let resolvedCategory else {
+              let resolvedCategory,
+              let normalizedManagementURL else {
             return
         }
 
@@ -393,6 +428,7 @@ struct EditSubscriptionView: View {
                 : nil
         subscription.category = resolvedCategory
         subscription.notes = notes
+        subscription.managementURL = normalizedManagementURL
         subscription.reminderEnabled = reminderEnabled
         subscription.reminderDaysBefore =
             AppSettings.normalizedReminderDays(
