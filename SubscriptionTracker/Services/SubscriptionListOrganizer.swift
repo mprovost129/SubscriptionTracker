@@ -43,11 +43,35 @@ enum SubscriptionBillingFilter:
 }
 
 enum SubscriptionListOrganizer {
+    static let allCategoriesFilter = "All Categories"
+
+    static func categoryOptions(
+        from subscriptions: [Subscription]
+    ) -> [String] {
+        let categories = Set(
+            subscriptions.compactMap { subscription in
+                let category = subscription.category
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+
+                return category.isEmpty ? nil : category
+            }
+        )
+        .sorted {
+            $0.localizedStandardCompare($1)
+                == .orderedAscending
+        }
+
+        return [allCategoriesFilter] + categories
+    }
+
     static func organize(
         _ subscriptions: [Subscription],
         statusFilter: SubscriptionStatusFilter,
         billingFilter: SubscriptionBillingFilter,
-        sortOption: SubscriptionSortOption
+        sortOption: SubscriptionSortOption,
+        categoryFilter: String = allCategoriesFilter
     ) -> [Subscription] {
         subscriptions
             .filter {
@@ -60,6 +84,12 @@ enum SubscriptionListOrganizer {
                 matchesBilling(
                     $0,
                     filter: billingFilter
+                )
+            }
+            .filter {
+                matchesCategory(
+                    $0,
+                    filter: categoryFilter
                 )
             }
             .sorted {
@@ -101,6 +131,20 @@ enum SubscriptionListOrganizer {
         case .yearly:
             return subscription.billingFrequency == .yearly
         }
+    }
+
+    private static func matchesCategory(
+        _ subscription: Subscription,
+        filter: String
+    ) -> Bool {
+        guard filter != allCategoriesFilter else {
+            return true
+        }
+
+        return subscription.category.compare(
+            filter,
+            options: [.caseInsensitive, .diacriticInsensitive]
+        ) == .orderedSame
     }
 
     private static func comesBefore(
