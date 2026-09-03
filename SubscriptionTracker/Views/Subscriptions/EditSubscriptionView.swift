@@ -326,7 +326,7 @@ struct EditSubscriptionView: View {
                             text: $managementURL
                         )
                         .keyboardType(.URL)
-                        .textInputAutapitalization(.never)
+                        .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .accessibilityLabel("Manage URL")
 
