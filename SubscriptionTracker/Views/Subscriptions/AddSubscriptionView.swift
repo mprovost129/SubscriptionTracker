@@ -295,12 +295,6 @@ struct AddSubscriptionView: View {
                     
                     if reminderEnabled {
                         reminderTimingPicker
-
-                        Text(
-                            "Reminder timing: \(AppSettings.reminderTimingText(for: reminderDaysBefore))."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.primary)
                     }
                 } header: {
                     Text("Details")
