@@ -21,6 +21,7 @@ enum SubscriptionStatusFilter:
     case all = "All Statuses"
     case active = "Active"
     case canceled = "Canceled"
+    case freeTrials = "Free Trials"
 
     var id: Self {
         self
@@ -50,19 +51,6 @@ enum SubscriptionDateFilter:
     case overdue = "Overdue"
     case next7Days = "Next 7 Days"
     case next30Days = "Next 30 Days"
-
-    var id: Self {
-        self
-    }
-}
-
-enum SubscriptionTrialFilter:
-    String,
-    CaseIterable,
-    Identifiable {
-    case all = "All Trial Status"
-    case freeTrials = "Free Trials"
-    case notInFreeTrial = "Not in Free Trial"
 
     var id: Self {
         self
@@ -102,7 +90,6 @@ enum SubscriptionListOrganizer {
         sortOption: SubscriptionSortOption,
         categoryFilter: String = allCategoriesFilter,
         dateFilter: SubscriptionDateFilter = .all,
-        trialFilter: SubscriptionTrialFilter = .all,
         referenceDate: Date = Date(),
         calendar: Calendar = .current
     ) -> [Subscription] {
@@ -110,7 +97,9 @@ enum SubscriptionListOrganizer {
             .filter {
                 matchesStatus(
                     $0,
-                    filter: statusFilter
+                    filter: statusFilter,
+                    referenceDate: referenceDate,
+                    calendar: calendar
                 )
             }
             .filter {
@@ -133,14 +122,6 @@ enum SubscriptionListOrganizer {
                     calendar: calendar
                 )
             }
-            .filter {
-                matchesTrial(
-                    $0,
-                    filter: trialFilter,
-                    referenceDate: referenceDate,
-                    calendar: calendar
-                )
-            }
             .sorted {
                 comesBefore(
                     $0,
@@ -152,7 +133,9 @@ enum SubscriptionListOrganizer {
 
     private static func matchesStatus(
         _ subscription: Subscription,
-        filter: SubscriptionStatusFilter
+        filter: SubscriptionStatusFilter,
+        referenceDate: Date,
+        calendar: Calendar
     ) -> Bool {
         switch filter {
         case .all:
@@ -161,6 +144,12 @@ enum SubscriptionListOrganizer {
             return subscription.status == .active
         case .canceled:
             return subscription.status == .canceled
+        case .freeTrials:
+            return SubscriptionTrialCalculator.isActiveTrial(
+                subscription,
+                on: referenceDate,
+                calendar: calendar
+            )
         }
     }
 
@@ -228,29 +217,6 @@ enum SubscriptionListOrganizer {
                 from: referenceDate,
                 calendar: calendar
             )
-        }
-    }
-
-    private static func matchesTrial(
-        _ subscription: Subscription,
-        filter: SubscriptionTrialFilter,
-        referenceDate: Date,
-        calendar: Calendar
-    ) -> Bool {
-        let isActiveTrial =
-            SubscriptionTrialCalculator.isActiveTrial(
-                subscription,
-                on: referenceDate,
-                calendar: calendar
-            )
-
-        switch filter {
-        case .all:
-            return true
-        case .freeTrials:
-            return isActiveTrial
-        case .notInFreeTrial:
-            return !isActiveTrial
         }
     }
 
