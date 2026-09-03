@@ -56,6 +56,45 @@ enum RenewalCalendarCalculator {
             }
     }
 
+    static func activeSubscriptions(
+        inMonthContaining date: Date,
+        from subscriptions: [Subscription],
+        calendar: Calendar = .current
+    ) -> [Subscription] {
+        guard let monthInterval = calendar.dateInterval(
+            of: .month,
+            for: date
+        ) else {
+            return []
+        }
+
+        return subscriptions
+            .filter { subscription in
+                subscription.status == .active
+                && monthInterval.contains(
+                    subscription.nextBillingDate
+                )
+            }
+            .sorted { first, second in
+                if first.nextBillingDate != second.nextBillingDate {
+                    return first.nextBillingDate
+                        < second.nextBillingDate
+                }
+
+                let nameComparison =
+                    first.name.localizedStandardCompare(
+                        second.name
+                    )
+
+                if nameComparison == .orderedSame {
+                    return first.id.uuidString
+                        < second.id.uuidString
+                }
+
+                return nameComparison == .orderedAscending
+            }
+    }
+
     static func totalCharges(
         on date: Date,
         from subscriptions: [Subscription],
@@ -63,6 +102,21 @@ enum RenewalCalendarCalculator {
     ) -> Decimal {
         activeSubscriptions(
             on: date,
+            from: subscriptions,
+            calendar: calendar
+        )
+        .reduce(Decimal.zero) { total, subscription in
+            total + subscription.price
+        }
+    }
+
+    static func totalCharges(
+        inMonthContaining date: Date,
+        from subscriptions: [Subscription],
+        calendar: Calendar = .current
+    ) -> Decimal {
+        activeSubscriptions(
+            inMonthContaining: date,
             from: subscriptions,
             calendar: calendar
         )
