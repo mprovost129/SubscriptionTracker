@@ -23,6 +23,22 @@ struct RenewalCalendarView: View {
         )
     }
 
+    private var displayedMonthSubscriptions: [Subscription] {
+        RenewalCalendarCalculator.activeSubscriptions(
+            inMonthContaining: displayedMonth,
+            from: subscriptions,
+            calendar: calendar
+        )
+    }
+
+    private var displayedMonthTotal: Decimal {
+        RenewalCalendarCalculator.totalCharges(
+            inMonthContaining: displayedMonth,
+            from: subscriptions,
+            calendar: calendar
+        )
+    }
+
     private var selectedSubscriptions: [Subscription] {
         RenewalCalendarCalculator.activeSubscriptions(
             on: selectedDate,
@@ -68,6 +84,7 @@ struct RenewalCalendarView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     monthNavigation
+                    monthSummary
 
                     if dynamicTypeSize.isAccessibilitySize {
                         accessibleMonthList
@@ -132,6 +149,59 @@ struct RenewalCalendarView: View {
                 .contentShape(Rectangle())
             }
         }
+    }
+
+    private var monthSummary: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Scheduled This Month")
+                        .fontWeight(.semibold)
+
+                    Text(
+                        displayedMonthTotal.formatted(
+                            .currency(code: currencyCode)
+                        )
+                    )
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                    Text(monthChargeCountText)
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                }
+            } else {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Scheduled This Month")
+                            .fontWeight(.semibold)
+
+                        Text(monthChargeCountText)
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+                    }
+
+                    Spacer()
+
+                    Text(
+                        displayedMonthTotal.formatted(
+                            .currency(code: currencyCode)
+                        )
+                    )
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var monthChargeCountText: String {
+        let count = displayedMonthSubscriptions.count
+
+        return count == 1
+            ? "1 scheduled charge"
+            : "\(count) scheduled charges"
     }
 
     private var calendarGrid: some View {
