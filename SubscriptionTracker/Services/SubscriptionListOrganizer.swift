@@ -56,6 +56,19 @@ enum SubscriptionDateFilter:
     }
 }
 
+enum SubscriptionTrialFilter:
+    String,
+    CaseIterable,
+    Identifiable {
+    case all = "All Trial Status"
+    case freeTrials = "Free Trials"
+    case notInFreeTrial = "Not in Free Trial"
+
+    var id: Self {
+        self
+    }
+}
+
 enum SubscriptionListOrganizer {
     static let allCategoriesFilter = "All Categories"
 
@@ -89,6 +102,7 @@ enum SubscriptionListOrganizer {
         sortOption: SubscriptionSortOption,
         categoryFilter: String = allCategoriesFilter,
         dateFilter: SubscriptionDateFilter = .all,
+        trialFilter: SubscriptionTrialFilter = .all,
         referenceDate: Date = Date(),
         calendar: Calendar = .current
     ) -> [Subscription] {
@@ -115,6 +129,14 @@ enum SubscriptionListOrganizer {
                 matchesDate(
                     $0,
                     filter: dateFilter,
+                    referenceDate: referenceDate,
+                    calendar: calendar
+                )
+            }
+            .filter {
+                matchesTrial(
+                    $0,
+                    filter: trialFilter,
                     referenceDate: referenceDate,
                     calendar: calendar
                 )
@@ -206,6 +228,29 @@ enum SubscriptionListOrganizer {
                 from: referenceDate,
                 calendar: calendar
             )
+        }
+    }
+
+    private static func matchesTrial(
+        _ subscription: Subscription,
+        filter: SubscriptionTrialFilter,
+        referenceDate: Date,
+        calendar: Calendar
+    ) -> Bool {
+        let isActiveTrial =
+            SubscriptionTrialCalculator.isActiveTrial(
+                subscription,
+                on: referenceDate,
+                calendar: calendar
+            )
+
+        switch filter {
+        case .all:
+            return true
+        case .freeTrials:
+            return isActiveTrial
+        case .notInFreeTrial:
+            return !isActiveTrial
         }
     }
 
