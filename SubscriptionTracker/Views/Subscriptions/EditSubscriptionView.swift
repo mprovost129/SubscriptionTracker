@@ -326,7 +326,7 @@ struct EditSubscriptionView: View {
                             text: $managementURL
                         )
                         .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
+                        .textInputAutapitalization(.never)
                         .autocorrectionDisabled()
                         .accessibilityLabel("Manage URL")
 
@@ -346,12 +346,6 @@ struct EditSubscriptionView: View {
 
                     if reminderEnabled {
                         reminderTimingPicker
-
-                        Text(
-                            "Reminder timing: \(AppSettings.reminderTimingText(for: reminderDaysBefore))."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.primary)
                     }
                 } header: {
                     Text("Details")
