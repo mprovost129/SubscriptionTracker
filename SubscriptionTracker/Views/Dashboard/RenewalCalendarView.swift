@@ -496,6 +496,7 @@ struct RenewalCalendarView: View {
     ) -> String {
         if RenewalCalendarCalculator.isTrialEndEvent(
             subscription,
+            on: selectedDate,
             calendar: calendar
         ) {
             return "Trial Ends"
