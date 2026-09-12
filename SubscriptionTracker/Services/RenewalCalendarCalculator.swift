@@ -72,12 +72,34 @@ enum RenewalCalendarCalculator {
         from subscriptions: [Subscription],
         calendar: Calendar = .current
     ) -> [Subscription] {
-        scheduledCharges(
+        var seenSubscriptionIDs = Set<UUID>()
+
+        return scheduledCharges(
             inMonthContaining: date,
             from: subscriptions,
             calendar: calendar
         )
-        .map(\.subscription)
+        .compactMap { charge in
+            guard seenSubscriptionIDs.insert(
+                charge.subscription.id
+            ).inserted else {
+                return nil
+            }
+
+            return charge.subscription
+        }
+    }
+
+    static func scheduledChargeCount(
+        inMonthContaining date: Date,
+        from subscriptions: [Subscription],
+        calendar: Calendar = .current
+    ) -> Int {
+        scheduledCharges(
+            inMonthContaining: date,
+            from: subscriptions,
+            calendar: calendar
+        ).count
     }
 
     static func totalCharges(
@@ -100,13 +122,13 @@ enum RenewalCalendarCalculator {
         from subscriptions: [Subscription],
         calendar: Calendar = .current
     ) -> Decimal {
-        activeSubscriptions(
+        scheduledCharges(
             inMonthContaining: date,
             from: subscriptions,
             calendar: calendar
         )
-        .reduce(Decimal.zero) { total, subscription in
-            total + subscription.price
+        .reduce(Decimal.zero) { total, charge in
+            total + charge.subscription.price
         }
     }
 
