@@ -58,8 +58,13 @@ enum SubscriptionManagementURL {
     private static func isAcceptableWebHost(
         _ host: String
     ) -> Bool {
-        let hostParts = host
-            .lowercased()
+        let normalizedHost = host.lowercased()
+
+        guard normalizedHost.count <= 253 else {
+            return false
+        }
+
+        let hostParts = normalizedHost
             .split(
                 separator: ".",
                 omittingEmptySubsequences: false
@@ -78,6 +83,57 @@ enum SubscriptionManagementURL {
             domainParts = hostParts[...]
         }
 
-        return domainParts.count >= 2
+        guard
+            domainParts.count >= 2,
+            domainParts.allSatisfy(isValidHostLabel),
+            let topLevelDomain = domainParts.last
+        else {
+            return false
+        }
+
+        return isValidTopLevelDomain(topLevelDomain)
+    }
+
+    private static func isValidHostLabel(
+        _ label: String
+    ) -> Bool {
+        guard
+            !label.isEmpty,
+            label.count <= 63,
+            label.first != "-",
+            label.last != "-"
+        else {
+            return false
+        }
+
+        return label.unicodeScalars.allSatisfy { scalar in
+            switch scalar.value {
+            case 45, 48...57, 65...90, 97...122:
+                return true
+            default:
+                return false
+            }
+        }
+    }
+
+    private static func isValidTopLevelDomain(
+        _ label: String
+    ) -> Bool {
+        if label.hasPrefix("xn--") {
+            return label.count > 4 && isValidHostLabel(label)
+        }
+
+        guard label.count >= 2 else {
+            return false
+        }
+
+        return label.unicodeScalars.allSatisfy { scalar in
+            switch scalar.value {
+            case 65...90, 97...122:
+                return true
+            default:
+                return false
+            }
+        }
     }
 }
