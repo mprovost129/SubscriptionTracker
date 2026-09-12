@@ -44,6 +44,25 @@ struct RenewalCalendarProjectionTests {
 
         #expect(days == [2, 9, 16, 23, 30])
 
+        let monthSubscriptions =
+            RenewalCalendarCalculator.activeSubscriptions(
+                inMonthContaining: date(month: 9, day: 1),
+                from: [subscription],
+                calendar: calendar
+            )
+
+        #expect(monthSubscriptions.count == 1)
+        #expect(monthSubscriptions.first?.id == subscription.id)
+
+        let chargeCount =
+            RenewalCalendarCalculator.scheduledChargeCount(
+                inMonthContaining: date(month: 9, day: 1),
+                from: [subscription],
+                calendar: calendar
+            )
+
+        #expect(chargeCount == 5)
+
         let total = RenewalCalendarCalculator.totalCharges(
             inMonthContaining: date(month: 9, day: 1),
             from: [subscription],
