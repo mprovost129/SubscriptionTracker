@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import UniformTypeIdentifiers
 import UIKit
 
 struct SettingsView: View {
@@ -16,6 +17,13 @@ struct SettingsView: View {
     @State private var showingClearDataError = false
     @State private var clearDataErrorMessage = ""
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
+    @State private var showingImportPicker = false
+    @State private var pendingImport: SubscriptionCSVImportResult?
+    @State private var showingImportConfirmation = false
+    @State private var showingImportError = false
+    @State private var importErrorMessage = ""
+    @State private var showingImportSuccess = false
+    @State private var importSuccessMessage = ""
     
     @AppStorage(AppSettings.currencyCodeKey)
     private var currencyCode = AppSettings.defaultCurrencyCode
@@ -159,8 +167,20 @@ struct SettingsView: View {
                 .fontWeight(.semibold)
                 .disabled(subscriptions.isEmpty)
 
+                Button {
+                    showingImportPicker = true
+                } label: {
+                    Label(
+                        "Import Subscription Data",
+                        systemImage: "square.and.arrow.down"
+                    )
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.primary)
+                .fontWeight(.semibold)
+
                 Text(
-                    "Creates a CSV copy that you can save or share. Your data stays on this device unless you choose to export it."
+                    "Export creates a CSV copy you can save or share. Import supports current and older PDP Subscription Tracker CSV exports. Price history is not included in CSV backup or restore."
                 )
                 .font(.caption)
                 .foregroundStyle(.primary)
@@ -204,6 +224,62 @@ struct SettingsView: View {
                 }
             }
         }
+        .fileImporter(
+            isPresented: $showingImportPicker,
+            allowedContentTypes: [
+                .commaSeparatedText,
+                .plainText
+            ],
+            allowsMultipleSelection: false,
+            onCompletion: handleImportSelection
+        )
+        .confirmationDialog(
+            "Import Subscription Data",
+            isPresented: $showingImportConfirmation,
+            titleVisibility: .visible
+        ) {
+            if importDuplicateCount > 0 {
+                Button("Skip Matches") {
+                    performImport(policy: .skip)
+                }
+
+                Button("Replace Matches") {
+                    performImport(policy: .replace)
+                }
+
+                Button("Import All") {
+                    performImport(policy: .importAll)
+                }
+            } else {
+                Button("Import") {
+                    performImport(policy: .skip)
+                }
+            }
+
+            Button("Cancel", role: .cancel) {
+                pendingImport = nil
+            }
+        } message: {
+            Text(importConfirmationMessage)
+        }
+        .alert(
+            "Import Complete",
+            isPresented: $showingImportSuccess
+        ) {
+            Button("OK", role: .cancel) {
+            }
+        } message: {
+            Text(importSuccessMessage)
+        }
+        .alert(
+            "Could Not Import Data",
+            isPresented: $showingImportError
+        ) {
+            Button("OK", role: .cancel) {
+            }
+        } message: {
+            Text(importErrorMessage)
+        }
         .alert(
             "Clear all subscription data?",
             isPresented: $showingClearDataConfirmation
@@ -235,7 +311,8 @@ struct SettingsView: View {
     private var csvExportFile: SubscriptionCSVFile {
         let csv = SubscriptionCSVExporter.csvString(
             for: subscriptions,
-            currencyCode: currencyCode
+            currencyCode: currencyCode,
+            includeRestoreMetadata: true
         )
 
         return SubscriptionCSVFile(
@@ -243,6 +320,49 @@ struct SettingsView: View {
             filename:
                 SubscriptionCSVExporter.exportFilename()
         )
+    }
+
+    private var importDuplicateCount: Int {
+        guard let pendingImport else {
+            return 0
+        }
+
+        return SubscriptionCSVImporter.duplicateCount(
+            in: pendingImport,
+            existing: subscriptions
+        )
+    }
+
+    private var importConfirmationMessage: String {
+        guard let pendingImport else {
+            return ""
+        }
+
+        let recordCount = pendingImport.records.count
+        let recordText = recordCount == 1
+            ? "1 subscription"
+            : "\(recordCount) subscriptions"
+
+        var message = "The file contains \(recordText)."
+
+        if importDuplicateCount > 0 {
+            let duplicateText = importDuplicateCount == 1
+                ? "1 subscription matches existing data."
+                : "\(importDuplicateCount) subscriptions match existing data."
+            message += " \(duplicateText)"
+        }
+
+        if pendingImport.currencyCodes.count == 1,
+           let importedCurrency = pendingImport.currencyCodes.first,
+           importedCurrency != currencyCode {
+            message += " The file uses \(importedCurrency); your app currency will remain \(currencyCode)."
+        } else if pendingImport.currencyCodes.count > 1 {
+            message += " The file contains multiple currencies; your app currency will remain \(currencyCode)."
+        }
+
+        message += " CSV import does not restore price history."
+
+        return message
     }
     
     private var appVersion: String {
@@ -271,6 +391,227 @@ struct SettingsView: View {
             return "Temporary"
         @unknown default:
             return "Unknown"
+        }
+    }
+
+    private func handleImportSelection(
+        _ result: Result<[URL], Error>
+    ) {
+        do {
+            let urls = try result.get()
+
+            guard let url = urls.first else {
+                return
+            }
+
+            let didAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if didAccess {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            let data = try Data(contentsOf: url)
+
+            guard let csv = String(
+                data: data,
+                encoding: .utf8
+            ) else {
+                throw SubscriptionCSVImportFileError.notUTF8
+            }
+
+            pendingImport = try SubscriptionCSVImporter.parse(
+                csv: csv
+            )
+            showingImportConfirmation = true
+        } catch {
+            importErrorMessage = error.localizedDescription
+            showingImportError = true
+        }
+    }
+
+    private func performImport(
+        policy: SubscriptionCSVImportDuplicatePolicy
+    ) {
+        guard let pendingImport else {
+            return
+        }
+
+        var knownSubscriptions = subscriptions
+        var affectedSubscriptions: [Subscription] = []
+        var importedCount = 0
+        var replacedCount = 0
+        var skippedCount = 0
+
+        do {
+            for record in pendingImport.records {
+                let matchingSubscription =
+                    SubscriptionCSVImporter.matchingSubscription(
+                        for: record,
+                        in: knownSubscriptions
+                    )
+
+                if let matchingSubscription {
+                    switch policy {
+                    case .skip:
+                        skippedCount += 1
+                        continue
+
+                    case .replace:
+                        apply(
+                            record,
+                            to: matchingSubscription
+                        )
+                        affectedSubscriptions.append(
+                            matchingSubscription
+                        )
+                        replacedCount += 1
+                        continue
+
+                    case .importAll:
+                        break
+                    }
+                }
+
+                let newSubscription = subscription(
+                    from: record,
+                    preserveImportedID: matchingSubscription == nil
+                )
+
+                modelContext.insert(newSubscription)
+                knownSubscriptions.append(newSubscription)
+                affectedSubscriptions.append(newSubscription)
+                importedCount += 1
+            }
+
+            try modelContext.save()
+            self.pendingImport = nil
+
+            importSuccessMessage = importSummary(
+                imported: importedCount,
+                replaced: replacedCount,
+                skipped: skippedCount
+            )
+            showingImportSuccess = true
+
+            Task {
+                await refreshReminders(
+                    for: affectedSubscriptions
+                )
+            }
+        } catch {
+            modelContext.rollback()
+            importErrorMessage = error.localizedDescription
+            showingImportError = true
+        }
+    }
+
+    private func subscription(
+        from record: SubscriptionCSVImportRecord,
+        preserveImportedID: Bool
+    ) -> Subscription {
+        let subscription = Subscription(
+            name: record.name,
+            price: record.price,
+            billingFrequency: record.billingFrequency,
+            nextBillingDate: record.nextBillingDate,
+            trialEndDate: record.trialEndDate,
+            category: record.category,
+            notes: record.notes,
+            managementURL: record.managementURL,
+            reminderEnabled: record.reminderEnabled,
+            reminderDaysBefore: record.reminderDaysBefore,
+            status: record.status,
+            cancellationDate: record.cancellationDate
+        )
+
+        if preserveImportedID,
+           let importedID = record.id {
+            subscription.id = importedID
+        }
+
+        return subscription
+    }
+
+    private func apply(
+        _ record: SubscriptionCSVImportRecord,
+        to subscription: Subscription
+    ) {
+        subscription.name = record.name
+        subscription.price = record.price
+        subscription.billingFrequency = record.billingFrequency
+        subscription.nextBillingDate = record.nextBillingDate
+        subscription.trialEndDate = record.trialEndDate
+        subscription.category = record.category
+        subscription.notes = record.notes
+        subscription.managementURL = record.managementURL
+        subscription.reminderEnabled = record.reminderEnabled
+        subscription.reminderDaysBefore = record.reminderDaysBefore
+        subscription.status = record.status
+        subscription.cancellationDate = record.cancellationDate
+        subscription.updatedAt = Date()
+    }
+
+    private func importSummary(
+        imported: Int,
+        replaced: Int,
+        skipped: Int
+    ) -> String {
+        var parts: [String] = []
+
+        if imported > 0 {
+            parts.append(
+                imported == 1
+                    ? "1 subscription imported"
+                    : "\(imported) subscriptions imported"
+            )
+        }
+
+        if replaced > 0 {
+            parts.append(
+                replaced == 1
+                    ? "1 subscription replaced"
+                    : "\(replaced) subscriptions replaced"
+            )
+        }
+
+        if skipped > 0 {
+            parts.append(
+                skipped == 1
+                    ? "1 matching subscription skipped"
+                    : "\(skipped) matching subscriptions skipped"
+            )
+        }
+
+        return parts.isEmpty
+            ? "No subscription data changed."
+            : parts.joined(separator: ". ") + "."
+    }
+
+    private func refreshReminders(
+        for subscriptions: [Subscription]
+    ) async {
+        let settings = await UNUserNotificationCenter.current()
+            .notificationSettings()
+
+        let canSchedule = switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            true
+        default:
+            false
+        }
+
+        for subscription in subscriptions {
+            NotificationService.removeRenewalReminder(
+                for: subscription
+            )
+
+            if canSchedule {
+                try? await NotificationService
+                    .scheduleRenewalReminder(
+                        for: subscription
+                    )
+            }
         }
     }
     
@@ -306,6 +647,17 @@ struct SettingsView: View {
             .notificationSettings()
         
         notificationStatus = settings.authorizationStatus
+    }
+}
+
+private enum SubscriptionCSVImportFileError: LocalizedError {
+    case notUTF8
+
+    var errorDescription: String? {
+        switch self {
+        case .notUTF8:
+            return "The selected CSV file is not UTF-8 encoded."
+        }
     }
 }
 
