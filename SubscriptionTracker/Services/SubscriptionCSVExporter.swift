@@ -14,10 +14,28 @@ enum SubscriptionCSVExporter {
         "Cancellation Date"
     ]
 
+    private static let restoreColumnTitles = [
+        "Subscription ID",
+        "Name",
+        "Price",
+        "Currency",
+        "Billing Frequency",
+        "Next Renewal Date",
+        "Trial End Date",
+        "Status",
+        "Category",
+        "Reminder Enabled",
+        "Reminder Days Before",
+        "Manage URL",
+        "Notes",
+        "Cancellation Date"
+    ]
+
     static func csvString(
         for subscriptions: [Subscription],
         currencyCode: String,
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        includeRestoreMetadata: Bool = false
     ) -> String {
         let sortedSubscriptions = subscriptions.sorted {
             let nameComparison = $0.name.localizedStandardCompare(
@@ -29,6 +47,43 @@ enum SubscriptionCSVExporter {
             }
 
             return nameComparison == .orderedAscending
+        }
+
+        if includeRestoreMetadata {
+            let header = csvRow(restoreColumnTitles)
+
+            let rows = sortedSubscriptions.map { subscription in
+                csvRow([
+                    subscription.id.uuidString,
+                    subscription.name,
+                    NSDecimalNumber(
+                        decimal: subscription.price
+                    ).stringValue,
+                    currencyCode,
+                    billingText(for: subscription),
+                    dateText(
+                        for: subscription.nextBillingDate,
+                        calendar: calendar
+                    ),
+                    dateText(
+                        for: subscription.trialEndDate,
+                        calendar: calendar
+                    ),
+                    statusText(for: subscription),
+                    subscription.category,
+                    subscription.reminderEnabled ? "Yes" : "No",
+                    String(subscription.reminderDaysBefore),
+                    subscription.managementURL,
+                    subscription.notes,
+                    dateText(
+                        for: subscription.cancellationDate,
+                        calendar: calendar
+                    )
+                ])
+            }
+
+            return ([header] + rows)
+                .joined(separator: "\r\n") + "\r\n"
         }
 
         let includesManagementURL = sortedSubscriptions.contains {
@@ -100,12 +155,14 @@ enum SubscriptionCSVExporter {
         for subscriptions: [Subscription],
         currencyCode: String,
         date: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        includeRestoreMetadata: Bool = false
     ) throws -> URL {
         let csv = csvString(
             for: subscriptions,
             currencyCode: currencyCode,
-            calendar: calendar
+            calendar: calendar,
+            includeRestoreMetadata: includeRestoreMetadata
         )
 
         guard let data = (
