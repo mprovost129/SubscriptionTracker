@@ -23,8 +23,8 @@ struct RenewalCalendarView: View {
         )
     }
 
-    private var displayedMonthSubscriptions: [Subscription] {
-        RenewalCalendarCalculator.activeSubscriptions(
+    private var displayedMonthChargeCount: Int {
+        RenewalCalendarCalculator.scheduledChargeCount(
             inMonthContaining: displayedMonth,
             from: subscriptions,
             calendar: calendar
@@ -197,7 +197,7 @@ struct RenewalCalendarView: View {
     }
 
     private var monthChargeCountText: String {
-        let count = displayedMonthSubscriptions.count
+        let count = displayedMonthChargeCount
 
         return count == 1
             ? "1 scheduled charge"
