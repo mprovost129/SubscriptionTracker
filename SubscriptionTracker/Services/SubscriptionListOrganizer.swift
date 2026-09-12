@@ -21,6 +21,7 @@ enum SubscriptionStatusFilter:
     case all = "All Statuses"
     case active = "Active"
     case canceled = "Canceled"
+    case freeTrials = "Free Trials"
 
     var id: Self {
         self
@@ -42,24 +43,83 @@ enum SubscriptionBillingFilter:
     }
 }
 
+enum SubscriptionDateFilter:
+    String,
+    CaseIterable,
+    Identifiable {
+    case all = "All Dates"
+    case overdue = "Overdue"
+    case next7Days = "Next 7 Days"
+    case next30Days = "Next 30 Days"
+
+    var id: Self {
+        self
+    }
+}
+
 enum SubscriptionListOrganizer {
+    static let allCategoriesFilter = "All Categories"
+
+    static func categoryOptions(
+        from subscriptions: [Subscription]
+    ) -> [String] {
+        let categorySet: Set<String> = Set(
+            subscriptions.compactMap { subscription -> String? in
+                let category = subscription.category
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+
+                return category.isEmpty ? nil : category
+            }
+        )
+
+        let categories = categorySet.sorted {
+            (first: String, second: String) in
+            first.localizedStandardCompare(second)
+                == .orderedAscending
+        }
+
+        return [allCategoriesFilter] + categories
+    }
+
     static func organize(
         _ subscriptions: [Subscription],
         statusFilter: SubscriptionStatusFilter,
         billingFilter: SubscriptionBillingFilter,
-        sortOption: SubscriptionSortOption
+        sortOption: SubscriptionSortOption,
+        categoryFilter: String = allCategoriesFilter,
+        dateFilter: SubscriptionDateFilter = .all,
+        referenceDate: Date = Date(),
+        calendar: Calendar = .current
     ) -> [Subscription] {
         subscriptions
             .filter {
                 matchesStatus(
                     $0,
-                    filter: statusFilter
+                    filter: statusFilter,
+                    referenceDate: referenceDate,
+                    calendar: calendar
                 )
             }
             .filter {
                 matchesBilling(
                     $0,
                     filter: billingFilter
+                )
+            }
+            .filter {
+                matchesCategory(
+                    $0,
+                    filter: categoryFilter
+                )
+            }
+            .filter {
+                matchesDate(
+                    $0,
+                    filter: dateFilter,
+                    referenceDate: referenceDate,
+                    calendar: calendar
                 )
             }
             .sorted {
@@ -73,7 +133,9 @@ enum SubscriptionListOrganizer {
 
     private static func matchesStatus(
         _ subscription: Subscription,
-        filter: SubscriptionStatusFilter
+        filter: SubscriptionStatusFilter,
+        referenceDate: Date,
+        calendar: Calendar
     ) -> Bool {
         switch filter {
         case .all:
@@ -82,6 +144,12 @@ enum SubscriptionListOrganizer {
             return subscription.status == .active
         case .canceled:
             return subscription.status == .canceled
+        case .freeTrials:
+            return SubscriptionTrialCalculator.isActiveTrial(
+                subscription,
+                on: referenceDate,
+                calendar: calendar
+            )
         }
     }
 
@@ -100,6 +168,55 @@ enum SubscriptionListOrganizer {
             return subscription.billingFrequency == .quarterly
         case .yearly:
             return subscription.billingFrequency == .yearly
+        }
+    }
+
+    private static func matchesCategory(
+        _ subscription: Subscription,
+        filter: String
+    ) -> Bool {
+        guard filter != allCategoriesFilter else {
+            return true
+        }
+
+        return subscription.category.compare(
+            filter,
+            options: [.caseInsensitive, .diacriticInsensitive]
+        ) == .orderedSame
+    }
+
+    private static func matchesDate(
+        _ subscription: Subscription,
+        filter: SubscriptionDateFilter,
+        referenceDate: Date,
+        calendar: Calendar
+    ) -> Bool {
+        switch filter {
+        case .all:
+            return true
+
+        case .overdue:
+            return RenewalCalculator.isOverdue(
+                subscription,
+                from: referenceDate,
+                calendar: calendar
+            )
+
+        case .next7Days:
+            return RenewalCalculator.isDueSoon(
+                subscription,
+                withinDays: 7,
+                from: referenceDate,
+                calendar: calendar
+            )
+
+        case .next30Days:
+            return RenewalCalculator.isDueSoon(
+                subscription,
+                withinDays: 30,
+                from: referenceDate,
+                calendar: calendar
+            )
         }
     }
 

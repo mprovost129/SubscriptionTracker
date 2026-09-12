@@ -13,6 +13,12 @@ struct DashboardView: View {
     
     @State private var billingFilter:
         SubscriptionBillingFilter = .all
+
+    @State private var categoryFilter =
+        SubscriptionListOrganizer.allCategoriesFilter
+
+    @State private var dateFilter:
+        SubscriptionDateFilter = .all
     
     @State private var showingSettings = false
     @State private var showingInsights = false
@@ -42,6 +48,12 @@ struct DashboardView: View {
         )
     }
 
+    private var categoryOptions: [String] {
+        SubscriptionListOrganizer.categoryOptions(
+            from: subscriptions
+        )
+    }
+
     private var matchingSubscriptions: [Subscription] {
         guard !trimmedSearchText.isEmpty else {
             return subscriptions
@@ -62,7 +74,9 @@ struct DashboardView: View {
             matchingSubscriptions,
             statusFilter: statusFilter,
             billingFilter: billingFilter,
-            sortOption: sortOption
+            sortOption: sortOption,
+            categoryFilter: categoryFilter,
+            dateFilter: dateFilter
         )
     }
 
@@ -93,6 +107,9 @@ struct DashboardView: View {
     private var filtersAreActive: Bool {
         statusFilter != .all
         || billingFilter != .all
+        || categoryFilter !=
+            SubscriptionListOrganizer.allCategoriesFilter
+        || dateFilter != .all
     }
     
     private var listOptionsAreModified: Bool {
@@ -104,6 +121,9 @@ struct DashboardView: View {
         sortOption = .renewalDate
         statusFilter = .all
         billingFilter = .all
+        categoryFilter =
+            SubscriptionListOrganizer.allCategoriesFilter
+        dateFilter = .all
     }
     
     private var subscriptionRowLayout: AnyLayout {
@@ -514,6 +534,13 @@ struct DashboardView: View {
                         : "Search by name or category"
                 )
             )
+            .onChange(of: categoryOptions) { _, options in
+                if !options.contains(categoryFilter) {
+                    categoryFilter =
+                        SubscriptionListOrganizer
+                            .allCategoriesFilter
+                }
+            }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
@@ -552,6 +579,20 @@ struct DashboardView: View {
                             }
                         }
 
+                        Section("Date") {
+                            Picker(
+                                "Filter by Date",
+                                selection: $dateFilter
+                            ) {
+                                ForEach(
+                                    SubscriptionDateFilter.allCases
+                                ) { filter in
+                                    Text(filter.rawValue)
+                                        .tag(filter)
+                                }
+                            }
+                        }
+
                         Section("Billing") {
                             Picker(
                                 "Filter by Billing",
@@ -562,6 +603,21 @@ struct DashboardView: View {
                                 ) { filter in
                                     Text(filter.rawValue)
                                         .tag(filter)
+                                }
+                            }
+                        }
+
+                        Section("Category") {
+                            Picker(
+                                "Filter by Category",
+                                selection: $categoryFilter
+                            ) {
+                                ForEach(
+                                    categoryOptions,
+                                    id: \.self
+                                ) { category in
+                                    Text(category)
+                                        .tag(category)
                                 }
                             }
                         }
