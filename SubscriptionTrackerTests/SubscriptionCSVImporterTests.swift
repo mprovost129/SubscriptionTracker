@@ -95,15 +95,17 @@ struct SubscriptionCSVImporterTests {
         )
 
         let record = try #require(result.records.first)
+        let importedTrialEndDate = try #require(
+            record.trialEndDate
+        )
 
         #expect(record.id == subscription.id)
         #expect(record.name == "Trial, Service")
         #expect(record.currencyCode == "CAD")
         #expect(record.billingFrequency == .quarterly)
-        #expect(record.trialEndDate != nil)
         #expect(
             calendar.isDate(
-                try #require(record.trialEndDate),
+                importedTrialEndDate,
                 inSameDayAs: trialEndDate
             )
         )
