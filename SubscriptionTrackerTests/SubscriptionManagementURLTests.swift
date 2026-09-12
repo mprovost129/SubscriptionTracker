@@ -48,6 +48,18 @@ struct SubscriptionManagementURLTests {
     }
 
     @Test
+    func managementURLAllowsHyphenatedHostLabels() {
+        let result =
+            SubscriptionManagementURL.normalizedString(
+                from: "my-account.example.com"
+            )
+
+        #expect(
+            result == "https://my-account.example.com"
+        )
+    }
+
+    @Test
     func managementURLRejectsIncompleteHosts() {
         #expect(
             SubscriptionManagementURL.normalizedString(
@@ -66,6 +78,28 @@ struct SubscriptionManagementURLTests {
                 from: "https://www.netflix"
             ) == nil
         )
+    }
+
+    @Test
+    func managementURLRejectsMalformedDNSHosts() {
+        let invalidHosts = [
+            "-.-",
+            "-example.com",
+            "example-.com",
+            "exam_ple.com",
+            "example..com",
+            "example.c",
+            "example.123",
+            "www.-.com"
+        ]
+
+        for invalidHost in invalidHosts {
+            #expect(
+                SubscriptionManagementURL.normalizedString(
+                    from: invalidHost
+                ) == nil
+            )
+        }
     }
 
     @Test
