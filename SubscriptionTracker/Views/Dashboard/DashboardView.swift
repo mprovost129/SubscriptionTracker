@@ -94,8 +94,26 @@ struct DashboardView: View {
         }
     }
 
+    private var overdueSubscriptions: [Subscription] {
+        let referenceDate = Date()
+
+        return paidSubscriptions.filter {
+            SubscriptionRenewalAction.isOverdue(
+                $0,
+                referenceDate: referenceDate
+            )
+        }
+    }
+
     private var upcomingSubscriptions: [Subscription] {
-        paidSubscriptions
+        let referenceDate = Date()
+
+        return paidSubscriptions.filter {
+            !SubscriptionRenewalAction.isOverdue(
+                $0,
+                referenceDate: referenceDate
+            )
+        }
     }
 
     private var canceledSubscriptions: [Subscription] {
@@ -350,6 +368,13 @@ struct DashboardView: View {
                                     }
                                 }
                             }
+
+                            if !overdueSubscriptions.isEmpty {
+                                OverdueRenewalsSectionView(
+                                    subscriptions: overdueSubscriptions,
+                                    currencyCode: currencyCode
+                                )
+                            }
                             
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Upcoming Renewals")
@@ -357,7 +382,10 @@ struct DashboardView: View {
                                     .fontWeight(.semibold)
                                 
                                 if upcomingSubscriptions.isEmpty {
-                                    if trialSubscriptions.isEmpty &&
+                                    if !overdueSubscriptions.isEmpty {
+                                        Text("No future paid renewals yet.")
+                                            .foregroundStyle(.primary)
+                                    } else if trialSubscriptions.isEmpty &&
                                         canceledSubscriptions.isEmpty {
                                         if !trimmedSearchText.isEmpty {
                                             ContentUnavailableView {
