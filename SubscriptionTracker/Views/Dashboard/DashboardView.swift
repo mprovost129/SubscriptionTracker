@@ -255,6 +255,11 @@ struct DashboardView: View {
                                     format: .currency(code: currencyCode)
                                 )
                             )
+
+                            UpcomingChargesSummaryView(
+                                subscriptions: subscriptions,
+                                currencyCode: currencyCode
+                            )
                             
                             Divider()
 
