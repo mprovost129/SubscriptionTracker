@@ -1,9 +1,0 @@
-{
-  "id" : "d5074838-e62e-49bf-8063-1036127391f9",
-  "targets" : [
-    {
-      "id" : "1D159694-0508-439E-8FCB-44337B7BAC1D",
-      "name" : "SubscriptionTracker"
-    }
-  ]
-}
