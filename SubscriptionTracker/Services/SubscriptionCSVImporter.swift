@@ -398,7 +398,7 @@ enum SubscriptionCSVImporter {
                 row.append(field)
                 field = ""
 
-            case "\n":
+            case "\n", "\r\n":
                 row.append(field)
                 rows.append(row)
                 row = []
