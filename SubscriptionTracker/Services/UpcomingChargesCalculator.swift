@@ -12,7 +12,14 @@ enum UpcomingChargesCalculator {
         referenceDate: Date = Date(),
         calendar: Calendar = .current
     ) -> UpcomingChargesSummary {
-        guard days >= 0 else {
+        guard
+            days >= 0,
+            let endDate = calendar.date(
+                byAdding: .day,
+                value: days,
+                to: calendar.startOfDay(for: referenceDate)
+            )
+        else {
             return UpcomingChargesSummary(
                 total: .zero,
                 chargeCount: 0
@@ -22,32 +29,55 @@ enum UpcomingChargesCalculator {
         let startDate = calendar.startOfDay(
             for: referenceDate
         )
+        let inclusiveEndDate = calendar.startOfDay(
+            for: endDate
+        )
 
         var total = Decimal.zero
         var chargeCount = 0
+        var monthCursor = startDate
 
-        for dayOffset in 0...days {
-            guard let date = calendar.date(
-                byAdding: .day,
-                value: dayOffset,
-                to: startDate
-            ) else {
-                continue
+        while monthCursor <= inclusiveEndDate {
+            for subscription in subscriptions {
+                let renewalDates =
+                    RenewalCalendarCalculator.scheduledRenewalDates(
+                        for: subscription,
+                        inMonthContaining: monthCursor,
+                        calendar: calendar
+                    )
+
+                for renewalDate in renewalDates {
+                    let renewalDay = calendar.startOfDay(
+                        for: renewalDate
+                    )
+
+                    guard
+                        renewalDay >= startDate,
+                        renewalDay <= inclusiveEndDate
+                    else {
+                        continue
+                    }
+
+                    chargeCount += 1
+                    total += subscription.price
+                }
             }
 
-            let scheduledSubscriptions =
-                RenewalCalendarCalculator.activeSubscriptions(
-                    on: date,
-                    from: subscriptions,
-                    calendar: calendar
+            guard
+                let monthStart = calendar.dateInterval(
+                    of: .month,
+                    for: monthCursor
+                )?.start,
+                let nextMonth = calendar.date(
+                    byAdding: .month,
+                    value: 1,
+                    to: monthStart
                 )
-
-            chargeCount += scheduledSubscriptions.count
-            total += scheduledSubscriptions.reduce(
-                Decimal.zero
-            ) { partialTotal, subscription in
-                partialTotal + subscription.price
+            else {
+                break
             }
+
+            monthCursor = nextMonth
         }
 
         return UpcomingChargesSummary(
